@@ -64,6 +64,7 @@ void CacheController::runTracefile() {
 	ofstream outfile(outputFile);
 	// open the output file
 	ifstream infile(inputFile);
+
 	// parse each line of the file and look for commands
 	while (getline(infile, line)) {
 		// these strings will be used in the file output
@@ -99,6 +100,7 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
+
 			// first process the read operation
 			cacheAccess(&response, false, address);
 			string tmpString; // will be used during the file output
@@ -131,9 +133,15 @@ void CacheController::runTracefile() {
 */
 CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int address) {
 	AddressInfo ai;
-	// this code should be changed to assign the proper index and tag
+
+	//Sets = cache/(associativity * blockSize)
+	//Index = log2 Sets
+	ai.setIndex = this->ci.numSetIndexBits;
+
+	//offset = log2 blockSize
+	//Tag = Address - Index - Offset
 	ai.tag = 12;
-	ai.setIndex = 2;
+
 	return ai;
 }
 
