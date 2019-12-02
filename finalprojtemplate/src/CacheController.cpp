@@ -87,6 +87,7 @@ void CacheController::runTracefile() {
 			cacheAccess(&response, false, address);
 			updateCycles(&response, false); 
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+            globalCycles += response.cycles;
 
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
@@ -96,6 +97,7 @@ void CacheController::runTracefile() {
 			cacheAccess(&response, true, address);
 			updateCycles(&response, true);
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+            globalCycles += response.cycles;
 
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
@@ -118,6 +120,7 @@ void CacheController::runTracefile() {
 			tmpString.append(response.eviction ? " eviction" : "");
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
+            globalCycles += totalCycles;
 
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
