@@ -115,7 +115,7 @@ void CacheController::runTracefile() {
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
 		}
-		
+
 		outfile << endl;
 	}
 	// add the final cache statistics
@@ -132,6 +132,8 @@ void CacheController::runTracefile() {
 CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int address) {
 	AddressInfo ai;
 	// this code should be changed to assign the proper index and tag
+	ai.tag = 12;
+	ai.setIndex = 2;
 	return ai;
 }
 
