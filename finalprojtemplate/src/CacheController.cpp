@@ -85,7 +85,8 @@ void CacheController::runTracefile() {
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, false, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+			updateCycles(&response, false); 
+            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
@@ -93,7 +94,8 @@ void CacheController::runTracefile() {
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, true, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+			updateCycles(&response, true);
+            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
@@ -103,6 +105,7 @@ void CacheController::runTracefile() {
 
 			// first process the read operation
 			cacheAccess(&response, false, address);
+            updateCycles(&response, false);
 			string tmpString; // will be used during the file output
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
@@ -110,6 +113,7 @@ void CacheController::runTracefile() {
 
 			// now process the write operation
 			cacheAccess(&response, true, address);
+            updateCycles(&response, true);
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			totalCycles += response.cycles;
@@ -184,24 +188,18 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 	if (isWrite) {
 
 		//WriteThrough Policy
-		if (ci.wp == WriteThrough){
-			cout << "THIS IS WRITETHROUGH" << endl;
+		if (ci.wp == WritePolicy::WriteThrough){
 			response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
 
 		//WriteBack Policy
-		} else if (ci.wp == WriteBack){
-			cout << "THIS IS WRITEBACK" << endl;
+		} else if (ci.wp == WritePolicy::WriteBack){
 
 			if (response->hit){
 				response->cycles = ci.cacheAccessCycles;
 			} else {
 				response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
 			}
-
-		} else {
-			cout << "DIDNT WORK" << endl;
-			response->cycles = 0;
-		}
+        }
 
 	//Load
 	} else {
