@@ -62,7 +62,7 @@ void CacheController::runTracefile() {
 
 	// open the output file
 	ofstream outfile(outputFile);
-	// open the output file
+	// open the input file
 	ifstream infile(inputFile);
 
 	// parse each line of the file and look for commands
@@ -107,6 +107,7 @@ void CacheController::runTracefile() {
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			unsigned long int totalCycles = response.cycles; // track the number of cycles used for both stages of the modify operation
+
 			// now process the write operation
 			cacheAccess(&response, true, address);
 			tmpString.append(response.hit ? " hit" : " miss");
@@ -178,5 +179,39 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 */
 void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 	// your code should calculate the proper number of cycles
-	response->cycles = 0;
+
+	//Store
+	if (isWrite) {
+
+		//WriteThrough Policy
+		if (ci.wp == WriteThrough){
+			cout << "THIS IS WRITETHROUGH" << endl;
+			response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+
+		//WriteBack Policy
+		} else if (ci.wp == WriteBack){
+			cout << "THIS IS WRITEBACK" << endl;
+
+			if (response->hit){
+				response->cycles = ci.cacheAccessCycles;
+			} else {
+				response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+			}
+
+		} else {
+			cout << "DIDNT WORK" << endl;
+			response->cycles = 0;
+		}
+
+	//Load
+	} else {
+		if (response->hit){
+			//Only accesses the cache
+			response->cycles = ci.cacheAccessCycles;
+
+		} else {
+			//Missed: Access both cache and memory
+			response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+		}
+	}
 }
