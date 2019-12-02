@@ -134,13 +134,8 @@ void CacheController::runTracefile() {
 CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int address) {
 	AddressInfo ai;
 
-	//Sets = cache/(associativity * blockSize)
-	//Index = log2 Sets
-	ai.setIndex = this->ci.numSetIndexBits;
-
-	//offset = log2 blockSize
-	//Tag = Address - Index - Offset
-	ai.tag = 12;
+	ai.setIndex = ci.numSetIndexBits;
+	ai.tag = address;
 
 	return ai;
 }
