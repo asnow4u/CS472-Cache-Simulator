@@ -17,15 +17,17 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->ci = ci;
 	this->inputFile = tracefile;
 	this->outputFile = this->inputFile + ".out";
+
 	// compute the other cache parameters
 	this->ci.numByteOffsetBits = log2(ci.blockSize);
 	this->ci.numSetIndexBits = log2(ci.numberSets);
+
 	// initialize the counters
 	this->globalCycles = 0;
 	this->globalHits = 0;
 	this->globalMisses = 0;
 	this->globalEvictions = 0;
-	
+
 	// create your cache structure
 	// ...
 
@@ -48,7 +50,7 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 void CacheController::runTracefile() {
 	cout << "Input tracefile: " << inputFile << endl;
 	cout << "Output file name: " << outputFile << endl;
-	
+
 	// process each input line
 	string line;
 	// define regular expressions that are used to locate commands
@@ -75,6 +77,7 @@ void CacheController::runTracefile() {
 		if (std::regex_match(line, commentPattern) || std::regex_match(line, instructionPattern)) {
 			// skip over comments and CPU instructions
 			continue;
+
 		} else if (std::regex_match(line, match, loadPattern)) {
 			cout << "Found a load op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -82,6 +85,7 @@ void CacheController::runTracefile() {
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, false, address);
 			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -89,6 +93,7 @@ void CacheController::runTracefile() {
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, true, address);
 			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -106,9 +111,11 @@ void CacheController::runTracefile() {
 			tmpString.append(response.eviction ? " eviction" : "");
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
+
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
 		}
+		
 		outfile << endl;
 	}
 	// add the final cache statistics
@@ -137,7 +144,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	AddressInfo ai = getAddressInfo(address);
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
-	
+
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 
 	if (response->hit)
