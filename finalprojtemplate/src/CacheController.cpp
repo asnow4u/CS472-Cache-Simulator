@@ -135,7 +135,9 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 	AddressInfo ai;
 
 	ai.setIndex = ci.numSetIndexBits;
-	ai.tag = address;
+
+	//!!!!!!!Gonna need to check this!!!!!!!!!!!!!!!!!!!!!
+	ai.tag = 64 - ci.numSetIndexBits - ci.numByteOffsetBits;
 
 	return ai;
 }
@@ -152,10 +154,18 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 
-	if (response->hit)
+	if (response->hit) {
+		globalHits++;
 		cout << "Address " << std::hex << address << " was a hit." << endl;
-	else
+
+	} else if (response->eviction){
+		globalEvictions++;
+		cout << "Address " << std::hex << address << " was an eviction." << endl;
+
+	} else {
+		globalMisses++;
 		cout << "Address " << std::hex << address << " was a miss." << endl;
+	}
 
 	cout << "-----------------------------------------" << endl;
 
