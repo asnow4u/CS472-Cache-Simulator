@@ -33,18 +33,30 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 
     //Direct Mapped
     if (ci.associativity == 1){
-        //Array of x elements
+        //Array of X elements
         AddressInfo aiArray[ci.numberSets];
+				aiArrayPointer = aiArray;
+				directMapped = true;
+				setAssociative = false;
+				fullyAssociative = false;
 
     //Fully Associative
     } else if (ci.numberSets == 1){ //cache / (N * block)
-        //Array of x elements     
+        //Array of Y elements
         AddressInfo aiArray[ci.associativity];
+				aiArrayPointer = aiArray;
+				directMapped = false;
+				setAssociative = false;
+				fullyAssociative = true;
 
-    //Set Associative 
+    //Set Associative
     } else {
         //Array of X x Y elements
         AddressInfo aiArray[ci.numberSets][ci.associativity];
+				aiArrayPointer = aiArray;
+				directMapped = false;
+				setAssociative = true;
+				fullyAssociative = false;
     }
 
 
@@ -103,12 +115,12 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-            cacheAccess(&response, false, address);
-			updateCycles(&response, false); 
-            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-            globalCycles += response.cycles;
+      cacheAccess(&response, false, address);
+			updateCycles(&response, false);
+      outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+      globalCycles += response.cycles;
 
-        //Store OP
+      //Store OP
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -116,10 +128,10 @@ void CacheController::runTracefile() {
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, true, address);
 			updateCycles(&response, true);
-            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-            globalCycles += response.cycles;
+      outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+      globalCycles += response.cycles;
 
-        //Modify OP
+      //Modify OP
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -128,7 +140,7 @@ void CacheController::runTracefile() {
 
 			// first process the read operation
 			cacheAccess(&response, false, address);
-            updateCycles(&response, false);
+      updateCycles(&response, false);
 			string tmpString; // will be used during the file output
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
@@ -136,14 +148,14 @@ void CacheController::runTracefile() {
 
 			// now process the write operation
 			cacheAccess(&response, true, address);
-            updateCycles(&response, true);
+      updateCycles(&response, true);
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
-            globalCycles += totalCycles;
+      globalCycles += totalCycles;
 
-        //Error
+      //Error
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
 		}
@@ -164,10 +176,12 @@ void CacheController::runTracefile() {
 CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int address) {
 	AddressInfo ai;
 
-	ai.setIndex = ci.numSetIndexBits;
+	int tagSize = 64 - ci.numSetIndexBits - ci.numByteOffsetBits;
 
-	//!!!!!!!Gonna need to check this!!!!!!!!!!!!!!!!!!!!!
-	ai.tag = 64 - ci.numSetIndexBits - ci.numByteOffsetBits;
+	//Convert to Binary, maybe????
+
+	ai.tag = 12;
+	ai.setIndex = ci.numSetIndexBits;
 
 	return ai;
 }
@@ -183,6 +197,56 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
+
+	//Access Array
+		//Check the index of address to the Array
+		//Check if tags are the same
+			//same: response->hit = true
+			//different: miss or eviction based on write polocy
+			//Also check for isWrite
+
+	//directMapped
+	if (directMapped){
+		//Check to see if the index is empty
+		if (*(aiArrayPointer + ai.setIndex) != NULL){
+			//Compare tags
+			if (*(aiArrayPointer + ai.setIndex).tag == ai.tag){
+				response->hit = true;
+
+			} else {
+				//Something exists but dosnt match the tag
+				//TODO what about store(iswrite)
+				if (ci.rp == ReplacementPolicy::LRU){
+					//LRU ReplacementPolicy
+					//TODO update array
+					reponse->eviction = true;
+
+				} else {
+					//Random ReplacementPolicy
+					//TODO update array
+					reponse->eviction = true;
+				}
+			}
+
+		//Nothing exists here
+		} else {
+			//Store Opperator
+			if (isWrite){
+				*(aiArrayPointer + ai.setIndex) = ai;
+			}
+		}
+
+	//fullyAssociative
+	} else if (fullyAssociative){
+		if (*(aiArrayPointer + ai.setIndex) != NULL){
+
+		}
+
+	//setAssociative
+	} else {
+
+
+	}
 
 	if (response->hit) {
 		globalHits++;
@@ -238,3 +302,5 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 		}
 	}
 }
+
+void
