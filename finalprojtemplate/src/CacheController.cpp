@@ -1,5 +1,6 @@
 /*
-	Cache Simulator (Starter Code) by Justin Goins
+	Cache Simulator by Andrew Snow
+    Starter Code by Justin Goins
 	Oregon State University
 	Fall Term 2019
 */
@@ -29,7 +30,23 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalEvictions = 0;
 
 	// create your cache structure
-	// ...
+
+    //Direct Mapped
+    if (ci.associativity == 1){
+        //Array of x elements
+        AddressInfo aiArray[ci.numberSets];
+
+    //Fully Associative
+    } else if (ci.numberSets == 1){ //cache / (N * block)
+        //Array of x elements     
+        AddressInfo aiArray[ci.associativity];
+
+    //Set Associative 
+    } else {
+        //Array of X x Y elements
+        AddressInfo aiArray[ci.numberSets][ci.associativity];
+    }
+
 
 	// manual test code to see if the cache is behaving properly
 	// will need to be changed slightly to match the function prototype
@@ -67,6 +84,7 @@ void CacheController::runTracefile() {
 
 	// parse each line of the file and look for commands
 	while (getline(infile, line)) {
+
 		// these strings will be used in the file output
 		string opString, activityString;
 		smatch match; // will eventually hold the hexadecimal address string
@@ -79,16 +97,18 @@ void CacheController::runTracefile() {
 			// skip over comments and CPU instructions
 			continue;
 
+        //Load OP
 		} else if (std::regex_match(line, match, loadPattern)) {
 			cout << "Found a load op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			cacheAccess(&response, false, address);
+            cacheAccess(&response, false, address);
 			updateCycles(&response, false); 
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
             globalCycles += response.cycles;
 
+        //Store OP
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -99,6 +119,7 @@ void CacheController::runTracefile() {
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
             globalCycles += response.cycles;
 
+        //Modify OP
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
@@ -122,6 +143,7 @@ void CacheController::runTracefile() {
 			outfile << " " << totalCycles << tmpString;
             globalCycles += totalCycles;
 
+        //Error
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
 		}
