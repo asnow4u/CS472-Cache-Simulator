@@ -22,11 +22,11 @@ class CacheController {
 		unsigned int globalEvictions;
 		std::string inputFile, outputFile;
 		bool directMapped;
-		bool setAssociative;
 		bool fullyAssociative;
 
 		CacheInfo ci;
 		AddressInfo *aiArrayPointer;
+		AddressInfo **aiSetArrayPointer;
 
 		// function to allow read or write access to the cache
 		void cacheAccess(CacheResponse*, bool, unsigned long int);

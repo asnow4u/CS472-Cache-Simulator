@@ -10,6 +10,8 @@
 #include <fstream>
 #include <regex>
 #include <cmath>
+#include <stdlib.h>
+#include <time.h>
 
 using namespace std;
 
@@ -29,13 +31,13 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalMisses = 0;
 	this->globalEvictions = 0;
 
+	srand(time(0));
 	// create your cache structure
-
     //Direct Mapped
     if (ci.associativity == 1){
         //Array of X elements
         AddressInfo aiArray[ci.numberSets];
-       
+
         //Initilize Array
         for (int i=0; i<(int)ci.numberSets; i++){
             aiArray[i].setIndex = 0;
@@ -44,26 +46,38 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 
 				aiArrayPointer = aiArray;
 				directMapped = true;
-				setAssociative = false;
 				fullyAssociative = false;
 
     //Fully Associative
     } else if (ci.numberSets == 1){ //cache / (N * block)
         //Array of Y elements
         AddressInfo aiArray[ci.associativity];
+
+				//Initilize Array
+				for (int i=0; i<(int)ci.associativity; i++){
+						aiArray[i].setIndex = 0;
+						aiArray[i].tag = 0;
+				}
+
 				aiArrayPointer = aiArray;
 				directMapped = false;
-				setAssociative = false;
 				fullyAssociative = true;
 
     //Set Associative
     } else {
         //Array of X x Y elements
         AddressInfo aiArray[ci.numberSets][ci.associativity];
-		//aiArrayPointer = aiArray;
-		directMapped = false;
-		setAssociative = true;
-		fullyAssociative = false;
+
+				for (int i=0; i<(int)ci.numberSets; i++){
+					for (int j=0; j<(int)ci.associativity; j++){
+							aiArray[i][j].setIndex = 0;
+							aiArray[i][j].tag = 0;
+					}
+				}
+
+				//aiArrayPointer = aiArray; //**aiSetArrayPointer;
+				directMapped = false;
+				fullyAssociative = false;
     }
 
 
@@ -212,34 +226,49 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 			//Compare tags
 			if (aiArrayPointer[ai.setIndex].tag == ai.tag){
 				response->hit = true;
-
+			//Replace what is written at the index
 			} else {
-				//Replace what is written at the index
-			    aiArrayPointer[ai.setIndex] = ai;
+			  aiArrayPointer[ai.setIndex] = ai;
 				response->eviction = true;
-
-				//Something exists but dosnt match the tag
-				// if (ci.rp == ReplacementPolicy::LRU){
-				// 	//LRU ReplacementPolicy
-				// 	//TODO update array
-				// 	reponse->eviction = true;
-				//
-				// } else {
-				// 	//Random ReplacementPolicy
-				// 	//TODO update array
-				// 	reponse->eviction = true;
-				// }
 			}
-
 		//Nothing exists here
 		} else {
-			//Miss, Place ai at index
+			//Replace what is written at the index
 			aiArrayPointer[ai.setIndex] = ai;
-
+			response->eviction = true;
 		}
 
 	//fullyAssociative
 	} else if (fullyAssociative){
+		//Loop through blocks
+		for (int i=0; i<aiArrayPointer.size(); i++){
+			//Compare tags
+			if (aiArrayPointer[i].tag == ai.tag){
+				response->hit = true;
+			}
+		}
+		if (!response->hit){
+			//Check for open block
+			int count = 0;
+			for (int i=0; i<aiArrayPointer.size(); i++){
+				if (aiArrayPointer[i].tag == 0 && count < 1){
+					aiArrayPointer[i] = ai;
+					count++;
+				}
+			}
+			//Use the proper ReplacementPolicy
+			if (count < 1){
+				if (ci.rp == ReplacementPolicy::LRU){
+					//LRU ReplacementPolicy
+					//TODO update array
+					reponse->eviction = true;
+				} else {
+					//Random ReplacementPolicy
+					aiArrayPointer[(rand() % aiArrayPointer.size())] = ai;
+					reponse->eviction = true;
+				}
+			}
+		}
 
 	//setAssociative
 	} else {
@@ -301,4 +330,3 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 		}
 	}
 }
-
