@@ -198,13 +198,6 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 
-	//Access Array
-		//Check the index of address to the Array
-		//Check if tags are the same
-			//same: response->hit = true
-			//different: miss or eviction based on write polocy
-			//Also check for isWrite
-
 	//directMapped
 	if (directMapped){
 		//Check to see if the index is empty
@@ -214,26 +207,28 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 				response->hit = true;
 
 			} else {
-				//Something exists but dosnt match the tag
-				//TODO what about store(iswrite)
-				if (ci.rp == ReplacementPolicy::LRU){
-					//LRU ReplacementPolicy
-					//TODO update array
-					reponse->eviction = true;
+				//Replace what is written at the index
+				*(aiArrayPointer + ai.setIndex) = ai;
+				response-eviction = true;
 
-				} else {
-					//Random ReplacementPolicy
-					//TODO update array
-					reponse->eviction = true;
-				}
+				//Something exists but dosnt match the tag
+				// if (ci.rp == ReplacementPolicy::LRU){
+				// 	//LRU ReplacementPolicy
+				// 	//TODO update array
+				// 	reponse->eviction = true;
+				//
+				// } else {
+				// 	//Random ReplacementPolicy
+				// 	//TODO update array
+				// 	reponse->eviction = true;
+				// }
 			}
 
 		//Nothing exists here
 		} else {
-			//Store Opperator
-			if (isWrite){
-				*(aiArrayPointer + ai.setIndex) = ai;
-			}
+			//Miss, Place ai at index
+			*(aiArrayPointer + ai.setIndex) = ai;
+
 		}
 
 	//fullyAssociative
