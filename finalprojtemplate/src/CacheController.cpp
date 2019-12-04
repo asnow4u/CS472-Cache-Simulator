@@ -273,8 +273,35 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
 	//setAssociative
 	} else {
+        //Loop through index looking for tag
+        for (int i=0; i<(int)ci.associativity; i++){
+            if (aiSetArrayPointer[ai.setIndex][i].tag == ai.tag){
+                response->hit = true;
+            }
+        }
 
+        if (!response->hit){
+            //Search for empty block
+           int count = 0;
+           for (int i=0; i<(int)ci.associativity; i++){
+                if (aiSetArrayPointer[ai.setIndex][i].tag == 0 && count < 1){
+                    aiSetArrayPointer[ai.setIndex][i] = ai;
+                    count++;
+                }
+           }
+           //Use proper ReplacementPolicy
+           if (count < 1){
+                if (ci.rp == ReplacementPolicy::LRU){
+                    //TODO update array
+                    response->eviction = true;
+                
+                } else {
+                    aiSetArrayPointer[ai.setIndex][(rand() % (int)ci.associativity +1)] = ai;
+                    response->eviction = true;
 
+                }
+           }
+        }
 	}
 
 	if (response->hit) {
