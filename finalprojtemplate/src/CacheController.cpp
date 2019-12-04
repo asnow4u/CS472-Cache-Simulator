@@ -202,31 +202,29 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 	char* addressChar;
 	unsigned long int temp = address;
 	int tagSize;
-
+    
 	//Convert to Binary
 
-	//Find number of digits in address
-	while(temp){
-		temp /= 10;
-		addressSize++;
-	}
+	
+    //Find number of digits in address
+	while(temp > 0){
+        temp /= 10;
+		addressSize++; 
+    }
+    addressSize--;
 
-	tagSize = = addressSize - (ci.numSetIndexBits + ci.numByteOffsetBits);
 
-	//Put Binary into char*
-	// for (int i=addressSize; i>0; i--){
-	// 	addressChar[i] = address % 10;
-	// 	address /= 10;
-	// }
+	tagSize = 64 - (ci.numSetIndexBits + ci.numByteOffsetBits);
 
 	//10*tagsize to get the number
-	//ex: 10012 % 10 = 2
+	//ex: 10011 % 10 = 1
 	//Might need to do offset first, then index, then the tag
 	//Fill in tag and index
 
-	cout << address << endl;
-	int number = address % 10;
-	cout << number << endl;
+    //    cout << "address: " << address << endl;
+    cout << "size: " << addressSize << endl;
+    
+
 	ai.setIndex = ci.numSetIndexBits;
 	ai.tag = 12;
 
