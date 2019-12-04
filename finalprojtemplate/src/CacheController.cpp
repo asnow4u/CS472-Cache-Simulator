@@ -12,6 +12,7 @@
 #include <cmath>
 #include <stdlib.h>
 #include <time.h>
+#include <array>
 
 using namespace std;
 
@@ -241,7 +242,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	//fullyAssociative
 	} else if (fullyAssociative){
 		//Loop through blocks
-		for (int i=0; i<aiArrayPointer.size(); i++){
+		for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
 			//Compare tags
 			if (aiArrayPointer[i].tag == ai.tag){
 				response->hit = true;
@@ -250,7 +251,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 		if (!response->hit){
 			//Check for open block
 			int count = 0;
-			for (int i=0; i<aiArrayPointer.size(); i++){
+			for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
 				if (aiArrayPointer[i].tag == 0 && count < 1){
 					aiArrayPointer[i] = ai;
 					count++;
@@ -261,11 +262,11 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 				if (ci.rp == ReplacementPolicy::LRU){
 					//LRU ReplacementPolicy
 					//TODO update array
-					reponse->eviction = true;
+					response->eviction = true;
 				} else {
 					//Random ReplacementPolicy
-					aiArrayPointer[(rand() % aiArrayPointer.size())] = ai;
-					reponse->eviction = true;
+					aiArrayPointer[(rand() % (int)sizeof(aiArrayPointer))] = ai;
+					response->eviction = true;
 				}
 			}
 		}
