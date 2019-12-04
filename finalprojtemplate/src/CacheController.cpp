@@ -35,6 +35,13 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
     if (ci.associativity == 1){
         //Array of X elements
         AddressInfo aiArray[ci.numberSets];
+       
+        //Initilize Array
+        for (int i=0; i<(int)ci.numberSets; i++){
+            aiArray[i].setIndex = 0;
+            aiArray[i].tag = 0;
+        }
+
 				aiArrayPointer = aiArray;
 				directMapped = true;
 				setAssociative = false;
@@ -53,10 +60,10 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
     } else {
         //Array of X x Y elements
         AddressInfo aiArray[ci.numberSets][ci.associativity];
-				aiArrayPointer = aiArray;
-				directMapped = false;
-				setAssociative = true;
-				fullyAssociative = false;
+		//aiArrayPointer = aiArray;
+		directMapped = false;
+		setAssociative = true;
+		fullyAssociative = false;
     }
 
 
@@ -201,15 +208,15 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	//directMapped
 	if (directMapped){
 		//Check to see if the index is empty
-		if (*(aiArrayPointer + ai.setIndex) != NULL){
+		if (aiArrayPointer[ai.setIndex].tag != 0){
 			//Compare tags
-			if (*(aiArrayPointer + ai.setIndex).tag == ai.tag){
+			if (aiArrayPointer[ai.setIndex].tag == ai.tag){
 				response->hit = true;
 
 			} else {
 				//Replace what is written at the index
-				*(aiArrayPointer + ai.setIndex) = ai;
-				response-eviction = true;
+			    aiArrayPointer[ai.setIndex] = ai;
+				response->eviction = true;
 
 				//Something exists but dosnt match the tag
 				// if (ci.rp == ReplacementPolicy::LRU){
@@ -227,15 +234,12 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 		//Nothing exists here
 		} else {
 			//Miss, Place ai at index
-			*(aiArrayPointer + ai.setIndex) = ai;
+			aiArrayPointer[ai.setIndex] = ai;
 
 		}
 
 	//fullyAssociative
 	} else if (fullyAssociative){
-		if (*(aiArrayPointer + ai.setIndex) != NULL){
-
-		}
 
 	//setAssociative
 	} else {
@@ -298,4 +302,3 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 	}
 }
 
-void
