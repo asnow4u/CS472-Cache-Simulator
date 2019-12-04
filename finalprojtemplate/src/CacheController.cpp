@@ -196,14 +196,39 @@ void CacheController::runTracefile() {
 	Calculate the block index and tag for a specified address.
 */
 CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int address) {
+
 	AddressInfo ai;
+	int addressSize = 0;
+	char* addressChar;
+	unsigned long int temp = address;
+	int tagSize;
 
-	int tagSize = 64 - ci.numSetIndexBits - ci.numByteOffsetBits;
+	//Convert to Binary
 
-	//Convert to Binary, maybe????
+	//Find number of digits in address
+	while(temp){
+		temp /= 10;
+		addressSize++;
+	}
 
-	ai.tag = 12;
+	tagSize = = addressSize - (ci.numSetIndexBits + ci.numByteOffsetBits);
+
+	//Put Binary into char*
+	// for (int i=addressSize; i>0; i--){
+	// 	addressChar[i] = address % 10;
+	// 	address /= 10;
+	// }
+
+	//10*tagsize to get the number
+	//ex: 10012 % 10 = 2
+	//Might need to do offset first, then index, then the tag
+	//Fill in tag and index
+
+	cout << address << endl;
+	int number = address % 10;
+	cout << number << endl;
 	ai.setIndex = ci.numSetIndexBits;
+	ai.tag = 12;
 
 	return ai;
 }
@@ -294,7 +319,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
                 if (ci.rp == ReplacementPolicy::LRU){
                     //TODO update array
                     response->eviction = true;
-                
+
                 } else {
                     aiSetArrayPointer[ai.setIndex][(rand() % (int)ci.associativity +1)] = ai;
                     response->eviction = true;
