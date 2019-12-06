@@ -118,7 +118,6 @@ void CacheController::runTracefile() {
 
 	// parse each line of the file and look for commands
 	while (getline(infile, line)) {
-
 		// these strings will be used in the file output
 		string opString, activityString;
 		smatch match; // will eventually hold the hexadecimal address string
@@ -137,10 +136,10 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-      cacheAccess(&response, false, address);
+            cacheAccess(&response, false, address);
 			updateCycles(&response, false);
-      outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-      globalCycles += response.cycles;
+            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+            globalCycles += response.cycles;
 
       //Store OP
 		} else if (std::regex_match(line, match, storePattern)) {
@@ -150,8 +149,8 @@ void CacheController::runTracefile() {
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, true, address);
 			updateCycles(&response, true);
-      outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-      globalCycles += response.cycles;
+            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+            globalCycles += response.cycles;
 
       //Modify OP
 		} else if (std::regex_match(line, match, modifyPattern)) {
@@ -159,23 +158,23 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-
 			// first process the read operation
 			cacheAccess(&response, false, address);
-      updateCycles(&response, false);
-			string tmpString; // will be used during the file output
-			tmpString.append(response.hit ? " hit" : " miss");
+            updateCycles(&response, false);
+
+            string tmpString; // will be used during the file output
+            tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			unsigned long int totalCycles = response.cycles; // track the number of cycles used for both stages of the modify operation
-
+            
 			// now process the write operation
 			cacheAccess(&response, true, address);
-      updateCycles(&response, true);
+            updateCycles(&response, true);
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
-      globalCycles += totalCycles;
+            globalCycles += totalCycles;
 
       //Error
 		} else {
@@ -222,10 +221,8 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
     binaryMask = ~(~0 << ((addressSize - (ci.numSetIndexBits + ci.numByteOffsetBits)) + 1));
 	ai.tag = (address >> (ci.numSetIndexBits + ci.numByteOffsetBits) & binaryMask);
 
-
-
-
-    ai.setIndex = 12;
+    ai.setIndex = 2;
+    ai.tag = 1;
 
 	return ai;
 }
@@ -235,6 +232,7 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 	The read or write is indicated by isWrite.
 */
 void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigned long int address) {
+
 	// determine the index and tag
 	AddressInfo ai = getAddressInfo(address);
 
@@ -350,7 +348,6 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 */
 void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 	// your code should calculate the proper number of cycles
-
 	//Store
 	if (isWrite) {
 
@@ -370,6 +367,7 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 
 	//Load
 	} else {
+
 		if (response->hit){
 			//Only accesses the cache
 			response->cycles = ci.cacheAccessCycles;
