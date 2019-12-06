@@ -34,8 +34,7 @@ class CacheController {
 		AddressInfo getAddressInfo(unsigned long int);
 		// compute the number of clock cycles used to complete a memory access
 		void updateCycles(CacheResponse*, bool);
-		// convert hex digit to binary value
-		int hexToBinary(unsigned int);
+
 
 	public:
 		CacheController(CacheInfo, std::string);

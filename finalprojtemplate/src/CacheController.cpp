@@ -199,32 +199,33 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 
 	AddressInfo ai;
 	int addressSize = 0;
-	char* addressChar;
 	unsigned long int temp = address;
-	int tagSize;
-	unsigned long int binary = 0;
+	int binaryMask;
 
-    //Find number of digits in address
-	do{
-        cout << "bit " << addressSize << ": " << temp % 16 << endl;
+    //Index bits
+    binaryMask = ~(~0 << (ci.numSetIndexBits + 1));
+    ai.setIndex = (address >> ci.numByteOffsetBits) & binaryMask;
+   
+    cout << "setIndex: " << ai.setIndex << endl;
 
-        //Convert Hex digit to binary
-				binary = binary * 10000 + hexToBinary(temp % 16);
-				cout << binary << endl;
 
-        temp /= 16;
-				addressSize++;
+    //Find size of address
+    do {
+       temp /= 2;
+       addressSize++;
     } while (temp > 0);
 
+    cout << "address bits: " << addressSize << endl;
 
 
-	tagSize = 64 - (ci.numSetIndexBits + ci.numByteOffsetBits);
+    //Tag bits
+    binaryMask = ~(~0 << ((addressSize - (ci.numSetIndexBits + ci.numByteOffsetBits)) + 1));
+	ai.tag = (address >> (ci.numSetIndexBits + ci.numByteOffsetBits) & binaryMask);
 
-    //cout << "address: " << address << endl;
-    cout << "size: " << addressSize << endl;
 
-	ai.setIndex = ci.numSetIndexBits;
-	ai.tag = 12;
+
+
+    ai.setIndex = 12;
 
 	return ai;
 }
@@ -380,29 +381,4 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 	}
 }
 
-int CacheController::hexToBinary(unsigned int hex){
 
-	cout << "hex: " << endl;
-	
-	switch(hex){
-		case 0:	return 0000;
-		case 1: return 0001;
-		case 2: return 0010;
-		case 3: return 0011;
-		case 4: return 0100;
-		case 5: return 0101;
-		case 6: return 0110;
-		case 7: return 0111;
-		case 8: return 1000;
-		case 9: return 1001;
-		case a: return 1010;
-		case b: return 1011;
-		case c: return 1100;
-		case d: return 1101;
-		case e: return 1110;
-		case f: return 1111;
-		default: cout << "error: not a hex value" << endl;
-		 				 return 0;
-
-	}
-}
