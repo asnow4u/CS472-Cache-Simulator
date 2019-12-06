@@ -202,19 +202,18 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 	char* addressChar;
 	unsigned long int temp = address;
 	int tagSize;
-    
+	unsigned long int binary = 0;
+
     //Find number of digits in address
 	do{
         cout << "bit " << addressSize << ": " << temp % 16 << endl;
 
         //Convert Hex digit to binary
-        
-        //append to int (binary value)
-        //value * 10(number of digits) [would be 4 with hex values]
-        //value + binary value
+				binary = binary * 10000 + hexToBinary(temp % 16);
+				cout << binary << endl;
 
         temp /= 16;
-		addressSize++; 
+				addressSize++;
     } while (temp > 0);
 
 
@@ -223,7 +222,7 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 
     //cout << "address: " << address << endl;
     cout << "size: " << addressSize << endl;
-    
+
 	ai.setIndex = ci.numSetIndexBits;
 	ai.tag = 12;
 
@@ -378,5 +377,32 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 			//Missed: Access both cache and memory
 			response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
 		}
+	}
+}
+
+int CacheController::hexToBinary(unsigned int hex){
+
+	cout << "hex: " << endl;
+	
+	switch(hex){
+		case 0:	return 0000;
+		case 1: return 0001;
+		case 2: return 0010;
+		case 3: return 0011;
+		case 4: return 0100;
+		case 5: return 0101;
+		case 6: return 0110;
+		case 7: return 0111;
+		case 8: return 1000;
+		case 9: return 1001;
+		case a: return 1010;
+		case b: return 1011;
+		case c: return 1100;
+		case d: return 1101;
+		case e: return 1110;
+		case f: return 1111;
+		default: cout << "error: not a hex value" << endl;
+		 				 return 0;
+
 	}
 }
