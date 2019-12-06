@@ -42,12 +42,13 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 
         //Initilize Array
         for (int i=0; i<(int)ci.numberSets; i++){
-            aiArray[i] = nullptr; 
+            aiArray[i] = nullptr; //Not sure why this doesnt work 
+        
         }
 
 		aiArrayPointer = aiArray;
 
-        for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
+        for (int i=0; i<(int)ci.numberSets; i++){
             if (aiArrayPointer[i]){
                 cout << i << " exists" << endl;
             }else {
@@ -128,7 +129,15 @@ void CacheController::runTracefile() {
 
         //Load OP
 		} else if (std::regex_match(line, match, loadPattern)) {
-			
+		
+        for (int i=0; i<(int)ci.numberSets; i++){
+            if (aiArrayPointer[i]){
+                cout << i << " exists" << endl;
+            }else {
+                cout << i << " is null" << endl;
+            }
+        }
+
             cout << "Found a load op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
@@ -250,6 +259,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
         //Check to see if the index is empty
         if (aiArrayPointer[ai.setIndex]){
             //Compare tags
+
 			//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
 			//	response->hit = true;
 			//Replace what is written at the index
@@ -260,7 +270,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 		//Nothing exists here
 		} else {
             //Replace what is written at the index (response->Miss)
-			aiArrayPointer[ai.setIndex] = &ai; 
+			//aiArrayPointer[ai.setIndex] = &ai; 
 		}
     
 	//fullyAssociative
