@@ -34,20 +34,29 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 
 	srand(time(0));
 	// create your cache structure
+    
     //Direct Mapped
     if (ci.associativity == 1){
         //Array of X elements
-        AddressInfo aiArray[ci.numberSets];
+        AddressInfo *aiArray[ci.numberSets];
 
         //Initilize Array
         for (int i=0; i<(int)ci.numberSets; i++){
-            aiArray[i].setIndex = 0;
-            aiArray[i].tag = 0;
+            aiArray[i] = nullptr; 
         }
 
-				aiArrayPointer = aiArray;
-				directMapped = true;
-				fullyAssociative = false;
+		aiArrayPointer = aiArray;
+
+        for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
+            if (aiArrayPointer[i]){
+                cout << i << " exists" << endl;
+            }else {
+                cout << i << " is null" << endl;
+            }
+        }
+
+      	directMapped = true;
+		fullyAssociative = false;
 
     //Fully Associative
     } else if (ci.numberSets == 1){ //cache / (N * block)
@@ -60,7 +69,7 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 						aiArray[i].tag = 0;
 				}
 
-				aiArrayPointer = aiArray;
+				//aiArrayPointer = aiArray;
 				directMapped = false;
 				fullyAssociative = true;
 
@@ -80,19 +89,6 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 				directMapped = false;
 				fullyAssociative = false;
     }
-
-
-	// manual test code to see if the cache is behaving properly
-	// will need to be changed slightly to match the function prototype
-	/*
-	cacheAccess(false, 0);
-	cacheAccess(false, 128);
-	cacheAccess(false, 256);
-
-	cacheAccess(false, 0);
-	cacheAccess(false, 128);
-	cacheAccess(false, 256);
-	*/
 }
 
 /*
@@ -132,7 +128,8 @@ void CacheController::runTracefile() {
 
         //Load OP
 		} else if (std::regex_match(line, match, loadPattern)) {
-			cout << "Found a load op!" << endl;
+			
+            cout << "Found a load op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
@@ -158,7 +155,8 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			// first process the read operation
+			
+            // first process the read operation
 			cacheAccess(&response, false, address);
             updateCycles(&response, false);
 
@@ -214,16 +212,14 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
        addressSize++;
     } while (temp > 0);
 
-    cout << "address bits: " << addressSize << endl;
+    cout << "address bits: " << addressSize << endl; //test
 
 
     //Tag bits
     binaryMask = ~(~0 << ((addressSize - (ci.numSetIndexBits + ci.numByteOffsetBits)) + 1));
 	ai.tag = (address >> (ci.numSetIndexBits + ci.numByteOffsetBits) & binaryMask);
 
-    ai.setIndex = 2;
-    ai.tag = 1;
-
+    
 	return ai;
 }
 
@@ -242,29 +238,37 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
 	//directMapped
 	if (directMapped){
-		//Check to see if the index is empty
-		if (aiArrayPointer[ai.setIndex].tag != 0){
-			//Compare tags
-			if (aiArrayPointer[ai.setIndex].tag == ai.tag){
-				response->hit = true;
+
+        /*for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
+            if (aiArrayPointer[i]){
+                cout << i << " exists" << endl;
+            }else {
+                cout << i << " is null" << endl;
+            }
+        }*/
+
+        //Check to see if the index is empty
+        if (aiArrayPointer[ai.setIndex]){
+            //Compare tags
+			//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
+			//	response->hit = true;
 			//Replace what is written at the index
-			} else {
-			  aiArrayPointer[ai.setIndex] = ai;
-				response->eviction = true;
-			}
+			//} else {
+			//  aiArrayPointer[ai.setIndex] = &ai;
+			//  response->eviction = true;
+			//}
 		//Nothing exists here
 		} else {
-			//Replace what is written at the index
-			aiArrayPointer[ai.setIndex] = ai;
-			response->eviction = true;
+            //Replace what is written at the index (response->Miss)
+			aiArrayPointer[ai.setIndex] = &ai; 
 		}
-
+    
 	//fullyAssociative
 	} else if (fullyAssociative){
 		//Loop through blocks
 		for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
 			//Compare tags
-			if (aiArrayPointer[i].tag == ai.tag){
+			if (aiArrayPointer[i]->tag == ai.tag){
 				response->hit = true;
 			}
 		}
@@ -272,8 +276,8 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 			//Check for open block
 			int count = 0;
 			for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
-				if (aiArrayPointer[i].tag == 0 && count < 1){
-					aiArrayPointer[i] = ai;
+				if (aiArrayPointer[i]->tag == 0 && count < 1){
+					//aiArrayPointer[i] = ai;
 					count++;
 				}
 			}
@@ -285,7 +289,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 					response->eviction = true;
 				} else {
 					//Random ReplacementPolicy
-					aiArrayPointer[(rand() % (int)sizeof(aiArrayPointer))] = ai;
+					//aiArrayPointer[(rand() % (int)sizeof(aiArrayPointer))] = ai;
 					response->eviction = true;
 				}
 			}
@@ -295,19 +299,19 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	} else {
         //Loop through index looking for tag
         for (int i=0; i<(int)ci.associativity; i++){
-            if (aiSetArrayPointer[ai.setIndex][i].tag == ai.tag){
-                response->hit = true;
-            }
+           // if (aiSetArrayPointer[ai->setIndex][i].tag == ai.tag){
+           //     response->hit = true;
+           // }
         }
 
         if (!response->hit){
             //Search for empty block
            int count = 0;
            for (int i=0; i<(int)ci.associativity; i++){
-                if (aiSetArrayPointer[ai.setIndex][i].tag == 0 && count < 1){
-                    aiSetArrayPointer[ai.setIndex][i] = ai;
-                    count++;
-                }
+               // if (aiSetArrayPointer[ai.setIndex][i].tag == 0 && count < 1){
+                   // aiSetArrayPointer[ai.setIndex][i] = ai;
+               //     count++;
+               // }
            }
            //Use proper ReplacementPolicy
            if (count < 1){
@@ -316,7 +320,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
                     response->eviction = true;
 
                 } else {
-                    aiSetArrayPointer[ai.setIndex][(rand() % (int)ci.associativity +1)] = ai;
+                   // aiSetArrayPointer[ai.setIndex][(rand() % (int)ci.associativity +1)] = ai;
                     response->eviction = true;
 
                 }

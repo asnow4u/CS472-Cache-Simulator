@@ -25,7 +25,7 @@ class CacheController {
 		bool fullyAssociative;
 
 		CacheInfo ci;
-		AddressInfo *aiArrayPointer;
+		AddressInfo **aiArrayPointer;
 		AddressInfo **aiSetArrayPointer;
 
 		// function to allow read or write access to the cache
