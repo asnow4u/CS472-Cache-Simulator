@@ -23,7 +23,7 @@ class CacheController {
 		std::string inputFile, outputFile;
 		bool directMapped;
 		bool fullyAssociative;
-
+        bool *accessed;
 		CacheInfo ci;
 		AddressInfo **aiArrayPointer;
 		AddressInfo **aiSetArrayPointer;

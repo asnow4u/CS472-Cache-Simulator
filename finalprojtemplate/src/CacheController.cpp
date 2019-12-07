@@ -39,23 +39,18 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
     if (ci.associativity == 1){
         //Array of X elements
         AddressInfo *aiArray[ci.numberSets];
+        bool accessArray[ci.numberSets];
 
         //Initilize Array
         for (int i=0; i<(int)ci.numberSets; i++){
-            aiArray[i] = nullptr; //Not sure why this doesnt work 
+            //aiArray[i] = nullptr;
+            accessArray[i] = false;
         
         }
 
 		aiArrayPointer = aiArray;
-
-        for (int i=0; i<(int)ci.numberSets; i++){
-            if (aiArrayPointer[i]){
-                cout << i << " exists" << endl;
-            }else {
-                cout << i << " is null" << endl;
-            }
-        }
-
+        accessed = accessArray;
+ 
       	directMapped = true;
 		fullyAssociative = false;
 
@@ -130,14 +125,6 @@ void CacheController::runTracefile() {
         //Load OP
 		} else if (std::regex_match(line, match, loadPattern)) {
 		
-        for (int i=0; i<(int)ci.numberSets; i++){
-            if (aiArrayPointer[i]){
-                cout << i << " exists" << endl;
-            }else {
-                cout << i << " is null" << endl;
-            }
-        }
-
             cout << "Found a load op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
@@ -248,18 +235,10 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	//directMapped
 	if (directMapped){
 
-        /*for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
-            if (aiArrayPointer[i]){
-                cout << i << " exists" << endl;
-            }else {
-                cout << i << " is null" << endl;
-            }
-        }*/
-
         //Check to see if the index is empty
-        if (aiArrayPointer[ai.setIndex]){
+        if (accessed[ai.setIndex]){
             //Compare tags
-
+            cout << "accessed" << endl;
 			//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
 			//	response->hit = true;
 			//Replace what is written at the index
@@ -269,6 +248,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 			//}
 		//Nothing exists here
 		} else {
+            cout << "not accessed" << endl;
             //Replace what is written at the index (response->Miss)
 			//aiArrayPointer[ai.setIndex] = &ai; 
 		}
