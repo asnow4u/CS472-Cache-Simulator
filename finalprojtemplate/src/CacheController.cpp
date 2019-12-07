@@ -47,11 +47,16 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
             accessArray[i] = false;
         
         }
-
+        
+        
 		aiArrayPointer = aiArray;
         accessed = accessArray;
- 
-      	directMapped = true;
+        
+        if (accessed[1]){
+            cout << "test" << endl;
+        }
+      	
+        directMapped = true;
 		fullyAssociative = false;
 
     //Fully Associative
@@ -110,7 +115,8 @@ void CacheController::runTracefile() {
 
 	// parse each line of the file and look for commands
 	while (getline(infile, line)) {
-		// these strings will be used in the file output
+		
+        // these strings will be used in the file output
 		string opString, activityString;
 		smatch match; // will eventually hold the hexadecimal address string
 		unsigned long int address;
@@ -234,9 +240,9 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
 	//directMapped
 	if (directMapped){
-
+       
         //Check to see if the index is empty
-        if (accessed[ai.setIndex]){
+        if (accessed[ai.setIndex] == false){
             //Compare tags
             cout << "accessed" << endl;
 			//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
