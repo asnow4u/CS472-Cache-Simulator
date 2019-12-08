@@ -9,13 +9,15 @@
 
 #include "CacheStuff.h"
 #include <string>
+#include <vector>
+#include <list>
+#include <iterator>
 
 class CacheController {
 	private:
 		struct AddressInfo {
 			unsigned long int tag;
 			unsigned int setIndex;
-			unsigned int valid;
 		};
 		unsigned int globalCycles;
 		unsigned int globalHits;
@@ -23,8 +25,10 @@ class CacheController {
 		unsigned int globalEvictions;
 		std::string inputFile, outputFile;
 
+		std::vector<std::list<CacheBlock>> myCache;
+		std::list<CacheBlock> :: iterator LRU;
+
 		CacheInfo ci;
-		AddressInfo **aiArray;
 
 		// function to allow read or write access to the cache
 		void cacheAccess(CacheResponse*, bool, unsigned long int);

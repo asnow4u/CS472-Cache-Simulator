@@ -13,43 +13,37 @@
 #include <stdlib.h>
 #include <time.h>
 #include <array>
+#include <list>
 
 using namespace std;
+
+int debug = 1;
 
 CacheController::CacheController(CacheInfo ci, string tracefile) {
 	// store the configuration info
 	this->ci = ci;
-	this->inputFile = tracefile;
+	this->inputFile = string(tracefile);
 	this->outputFile = this->inputFile + ".out";
-
 	// compute the other cache parameters
-	this->ci.numByteOffsetBits = log2(ci.blockSize);
-	this->ci.numSetIndexBits = log2(ci.numberSets);
-
+	this->numByteOffsetBits = log2(ci.blockSize);	//offset bits
+	this->numSetIndexBits = log2(ci.numberSets);	//index bits
 	// initialize the counters
 	this->globalCycles = 0;
 	this->globalHits = 0;
 	this->globalMisses = 0;
 	this->globalEvictions = 0;
 
-	srand(time(0));
-
 	// create your cache structure
-	AddressInfo tempArray[ci.numberSets][ci.associativity];
-
-	for (int i=0; i<this->ci.numberSets; i++){
-		for (int j=0; j<this->ci.associativity; j++){
-			AddressInfo tempAddress;
-			tempAddress.setIndex = 0;
-			tempAddress.tag = 0;
-			tempAddress.valid = 0;
-
-			tempArray[i][j] = tempAddress;
+	this->myCache.resize(ci.numberSets);
+	for (unsigned int i = 0; i < this->ci.numberSets; i++) {	//vector
+		for (unsigned int j = 0; j < this->ci.associativity; j++) {	//list
+			CacheBlock tempBlock;	//block
+			tempBlock.dirty = 0;
+			tempBlock.valid = 0;
+			tempBlock.tag = 0;
+			this->myCache[i].push_back(tempBlock);
 		}
 	}
-
-	this->aiArray = tempArray;
-
 }
 
 /*
@@ -72,7 +66,6 @@ void CacheController::runTracefile() {
 	ofstream outfile(outputFile);
 	// open the input file
 	ifstream infile(inputFile);
-
 	// parse each line of the file and look for commands
 	while (getline(infile, line)) {
 		// these strings will be used in the file output
@@ -86,68 +79,40 @@ void CacheController::runTracefile() {
 		if (std::regex_match(line, commentPattern) || std::regex_match(line, instructionPattern)) {
 			// skip over comments and CPU instructions
 			continue;
-
-        //Load OP
 		} else if (std::regex_match(line, match, loadPattern)) {
-
-        for (int i=0; i<(int)ci.numberSets; i++){
-            if (aiArrayPointer[i]){
-                cout << i << " exists" << endl;
-            }else {
-                cout << i << " is null" << endl;
-            }
-        }
-
-            cout << "Found a load op!" << endl;
+			cout << "Found a load op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-            cacheAccess(&response, false, address);
-			updateCycles(&response, false);
-            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-            globalCycles += response.cycles;
-
-      //Store OP
+			cacheAccess(&response, false, address);
+			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 		} else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, true, address);
-			updateCycles(&response, true);
-            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-            globalCycles += response.cycles;
-
-      //Modify OP
+			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
 		} else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-
-            // first process the read operation
+			// first process the read operation
 			cacheAccess(&response, false, address);
-            updateCycles(&response, false);
-
-            string tmpString; // will be used during the file output
-            tmpString.append(response.hit ? " hit" : " miss");
+			string tmpString; // will be used during the file output
+			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			unsigned long int totalCycles = response.cycles; // track the number of cycles used for both stages of the modify operation
-
 			// now process the write operation
 			cacheAccess(&response, true, address);
-            updateCycles(&response, true);
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
-            globalCycles += totalCycles;
-
-      //Error
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
 		}
-
 		outfile << endl;
 	}
 	// add the final cache statistics
@@ -197,122 +162,65 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 	The read or write is indicated by isWrite.
 */
 void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigned long int address) {
-
 	// determine the index and tag
 	AddressInfo ai = getAddressInfo(address);
 
+	// If Replacement Policy is LRU
+	if (this->ci.rp == ReplacementPolicy::LRU) {
+		//LRU
+		unsigned int end = this->ci.associativity;
+		for (unsigned int i = 0; i < end; i++) {
+			list<CacheBlock>::iterator it;
+			list<int>::iterator lastv;
+
+			//if (&myCache.valid) { //hit
+			if (isWrite) { //hit
+				response->hit = true;
+			}
+
+			else { //miss
+				/*lastv = myCache[i].end();
+				for (auto x : myCache[i]) {
+					++lastv;
+				}
+				myCache[i].splice(myCache[i].begin(), myCache[i], lastv);*/
+				myCache[i].end()->valid = true;
+				//this->myCache[end]->valid = true;
+				myCache[i].end()->tag = ai.tag;
+				//this->myCache[end]->tag = ai.tag;
+				response->hit = false;
+				response->eviction = true;
+				globalMisses++;
+
+				if (it->dirty) { //dirty
+					response->dirtyEviction = true;
+				}
+			}
+		}
+	}
+
+	if (debug){
+		//Just to see the Valid, Dirty, Tag of each block
+		for (unsigned int i = 0; i < this->ci.numberSets; i++) {
+			cout << "Index[" << i << "]";
+			list<CacheBlock>::iterator it;
+			for (it = myCache[i].begin(); it != this->myCache[i].end(); ++it) {
+				cout << " V:" << it->valid << " D:" << it->dirty << " T:" << it->tag << "\t";
+			}
+			cout << endl;
+		}
+	}
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 
-	//directMapped
-	if (this->ci.associativity == 1){
-
-        for (int i=0; i<this->ci.numberSets; i++){
-            if (aiArray[i][0].valid == 0){
-                cout << i << " is empty" << endl;
-            }else {
-                cout << i << " exists" << endl;
-            }
-        }
-	//
-  //       //Check to see if the index is empty
-  //     //  if (aiArrayPointer[ai.setIndex]){
-  //           //Compare tags
-	//
-	// 		//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
-	// 		//	response->hit = true;
-	// 		//Replace what is written at the index
-	// 		//} else {
-	// 		//  aiArrayPointer[ai.setIndex] = &ai;
-	// 		//  response->eviction = true;
-	// 		//}
-	// 	//Nothing exists here
-	// 	} else {
-  //           //Replace what is written at the index (response->Miss)
-	// 		//aiArrayPointer[ai.setIndex] = &ai;
-	// 	}
-	//
-	// //fullyAssociative
-	// } else if (fullyAssociative){
-	// 	//Loop through blocks
-	// 	for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
-	// 		//Compare tags
-	// 		if (aiArrayPointer[i]->tag == ai.tag){
-	// 			response->hit = true;
-	// 		}
-	// 	}
-	// 	if (!response->hit){
-	// 		//Check for open block
-	// 		int count = 0;
-	// 		for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
-	// 			if (aiArrayPointer[i]->tag == 0 && count < 1){
-	// 				//aiArrayPointer[i] = ai;
-	// 				count++;
-	// 			}
-	// 		}
-	// 		//Use the proper ReplacementPolicy
-	// 		if (count < 1){
-	// 			if (ci.rp == ReplacementPolicy::LRU){
-	// 				//LRU ReplacementPolicy
-	// 				//TODO update array
-	// 				response->eviction = true;
-	// 			} else {
-	// 				//Random ReplacementPolicy
-	// 				//aiArrayPointer[(rand() % (int)sizeof(aiArrayPointer))] = ai;
-	// 				response->eviction = true;
-	// 			}
-	// 		}
-	// 	}
-	//
-	// //setAssociative
-	// } else {
-  //       //Loop through index looking for tag
-  //       for (int i=0; i<(int)ci.associativity; i++){
-  //          // if (aiSetArrayPointer[ai->setIndex][i].tag == ai.tag){
-  //          //     response->hit = true;
-  //          // }
-  //       }
-	//
-  //       if (!response->hit){
-  //           //Search for empty block
-  //          int count = 0;
-  //          for (int i=0; i<(int)ci.associativity; i++){
-  //              // if (aiSetArrayPointer[ai.setIndex][i].tag == 0 && count < 1){
-  //                  // aiSetArrayPointer[ai.setIndex][i] = ai;
-  //              //     count++;
-  //              // }
-  //          }
-  //          //Use proper ReplacementPolicy
-  //          if (count < 1){
-  //               if (ci.rp == ReplacementPolicy::LRU){
-  //                   //TODO update array
-  //                   response->eviction = true;
-	//
-  //               } else {
-  //                  // aiSetArrayPointer[ai.setIndex][(rand() % (int)ci.associativity +1)] = ai;
-  //                   response->eviction = true;
-	//
-  //               }
-  //          }
-  //       }
-	}
-
 	if (response->hit) {
-		globalHits++;
 		cout << "Address " << std::hex << address << " was a hit." << endl;
-
-	} else if (response->eviction){
-		globalEvictions++;
-		cout << "Address " << std::hex << address << " was an eviction." << endl;
-
-	} else {
-		globalMisses++;
+	}
+	else {
 		cout << "Address " << std::hex << address << " was a miss." << endl;
 	}
-
 	cout << "-----------------------------------------" << endl;
-
 	return;
 }
 
