@@ -75,42 +75,61 @@ void CacheController::runTracefile() {
 		unsigned long int address;
 		// create a struct to track cache responses
 		CacheResponse response;
+        response.hit = false;
+        response.eviction = false;
 
 		// ignore comments
 		if (std::regex_match(line, commentPattern) || std::regex_match(line, instructionPattern)) {
 			// skip over comments and CPU instructions
 			continue;
-		} else if (std::regex_match(line, match, loadPattern)) {
+		
+        //Load Op
+        } else if (std::regex_match(line, match, loadPattern)) {
 			cout << "Found a load op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, false, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-		} else if (std::regex_match(line, match, storePattern)) {
+			updateCycles(&response, false);
+            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+            globalCycles += response.cycles;
+		
+        //Store Op
+        } else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
 			cacheAccess(&response, true, address);
-			outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
-		} else if (std::regex_match(line, match, modifyPattern)) {
+			updateCycles(&response, true);
+            outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
+            globalCycles += response.cycles;
+		
+        //Modify Op
+        } else if (std::regex_match(line, match, modifyPattern)) {
 			cout << "Found a modify op!" << endl;
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			// first process the read operation
+			
+            // first process the read operation
 			cacheAccess(&response, false, address);
-			string tmpString; // will be used during the file output
+			updateCycles(&response, false);
+            string tmpString; // will be used during the file output
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			unsigned long int totalCycles = response.cycles; // track the number of cycles used for both stages of the modify operation
-			// now process the write operation
+			
+            // now process the write operation
 			cacheAccess(&response, true, address);
-			tmpString.append(response.hit ? " hit" : " miss");
+			updateCycles(&response, true);
+            tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
+            globalCycles += totalCycles;
+
+        //error    
 		} else {
 			throw runtime_error("Encountered unknown line format in tracefile.");
 		}
@@ -186,7 +205,6 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
          if (aiArray[ai.setIndex][i].valid == 1){
             if (aiArray[ai.setIndex][i].tag == ai.tag){
                 response->hit = true;
-                cout << "HIT" << endl;
             }
          }
      }
@@ -214,12 +232,12 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
                 aiArray[ai.setIndex][1].tag = ai.tag;
 
                 response->eviction = true;
-            
+
             //LRU
             } else if(ci.rp == ReplacementPolicy::LRU) {
 
                 response->eviction = true;
-            
+
             //Random
             } else {
 
@@ -227,14 +245,22 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
             }
         }
     }
+    
+    // your code needs to update the global counters that track the number of hits, misses, and evictions
 
-	// your code needs to update the global counters that track the number of hits, misses, and evictions
+	if (response->hit){
+		globalHits++;
+        cout << "Address " << std::hex << address << " was a hit." << endl;
+	
+    } else if (response->eviction){
+	    globalEvictions++;
+        cout << "Address " << std::hex << address << " was an eviction." << endl;
 
-	if (response->hit)
-		cout << "Address " << std::hex << address << " was a hit." << endl;
-	else
-		cout << "Address " << std::hex << address << " was a miss." << endl;
+    } else {
+        globalMisses++;
+        cout << "Address " << std::hex << address << " was a miss." << endl;
 
+    }
 	cout << "-----------------------------------------" << endl;
 
 	return;
@@ -246,5 +272,31 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 */
 void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 	// your code should calculate the proper number of cycles
-	response->cycles = 0;
+	
+    //Store
+    if (isWrite) {
+        
+        //WriteThrough
+        if (ci.wp == WritePolicy::WriteThrough){
+            response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+
+        //WriteBack
+        } else {
+            if (response->hit){
+                response->cycles = ci.cacheAccessCycles;
+            } else {
+                response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+            }
+        }
+
+    //Load
+    } else {
+       
+        if (response->hit){
+            response->cycles = ci.cacheAccessCycles;
+ 
+        } else {
+            response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+        }
+    }
 }
