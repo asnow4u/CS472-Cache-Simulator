@@ -18,6 +18,7 @@ class CacheController {
 			unsigned int setIndex;
             unsigned int valid;
             unsigned int LRUcounter;
+            unsigned int dirty;
 		};
 		unsigned int globalCycles;
 		unsigned int globalHits;

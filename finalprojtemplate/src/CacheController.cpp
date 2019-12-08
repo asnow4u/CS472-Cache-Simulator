@@ -47,6 +47,7 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
             aiArray[i][j].setIndex = 0;
             aiArray[i][j].valid = 0;
             aiArray[i][j].LRUcounter = 0;
+            aiArray[i][j].dirty = 0;
         }
     }
 
@@ -84,6 +85,7 @@ void CacheController::runTracefile() {
 		CacheResponse response;
         response.hit = false;
         response.eviction = false;
+        response.dirtyEviction = false;
 
 		// ignore comments
 		if (std::regex_match(line, commentPattern) || std::regex_match(line, instructionPattern)) {
@@ -214,7 +216,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
             if (aiArray[ai.setIndex][i].tag == ai.tag){
                 
                 //Update LRUcounters 
-                if(ci.rp == ReplacementPolicy::LRU) {
+                if (ci.rp == ReplacementPolicy::LRU) {
                     for (unsigned int j=0; j<ci.associativity; j++){
                         if (aiArray[ai.setIndex][j].valid == 1){
                             aiArray[ai.setIndex][j].LRUcounter++;
@@ -223,7 +225,14 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
                     aiArray[ai.setIndex][i].LRUcounter = 0;
                 }
-                
+               
+                //Update Dirty Bit
+                if (isWrite){
+                    if (ci.wp == WritePolicy::WriteBack){
+                        aiArray[ai.setIndex][i].dirty = 1;
+                    }
+                }
+
                 response->hit = true;
             }
          }
@@ -253,6 +262,13 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
                     aiArray[ai.setIndex][i].LRUcounter = 0;
                 }
+
+                //Update Dirty Bit
+                if (isWrite){
+                    if (ci.wp == WritePolicy::WriteBack){
+                        aiArray[ai.setIndex][i].dirty = 1;
+                    }
+                }
             }
         }
 
@@ -263,7 +279,8 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
             if (ci.rp == ReplacementPolicy::LRU) {
                 unsigned int leastUsed = 0;
                 unsigned int leastUsedCounter = 0;
-
+                
+                //Find least used
                 for (unsigned int i=0; i<ci.associativity; i++){
                     if (aiArray[ai.setIndex][i].LRUcounter > leastUsedCounter){
                         leastUsedCounter = aiArray[ai.setIndex][i].LRUcounter;
@@ -282,12 +299,38 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
                 aiArray[ai.setIndex][leastUsed].LRUcounter = 0;
 
-                response->eviction = true;
+                //Check Dirty Bit
+                if (ci.wp == WritePolicy::WriteBack){
+                    if (aiArray[ai.setIndex][leastUsed].dirty == 1){
+                        response->dirtyEviction = true;  
 
+                        //Reset dirty bit
+                        if (!isWrite){
+                            aiArray[ai.setIndex][leastUsed].dirty = 0;
+                        }
+                    } 
+                }
+             
+                response->eviction = true;
+            
+                
             //Random
             } else {
                 unsigned int num = rand() % ci.associativity; 
                 aiArray[ai.setIndex][num].tag = ai.tag;
+                
+                //Check Dirty Bit
+                if (ci.wp == WritePolicy::WriteBack){
+                    if (aiArray[ai.setIndex][num].dirty == 1){
+                        response->dirtyEviction = true;  
+
+                        //Reset dirty bit
+                        if (!isWrite){
+                            aiArray[ai.setIndex][num].dirty = 0;
+                        }
+                    } 
+                }
+                
                 response->eviction = true;
             }
         }
@@ -329,10 +372,12 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 
         //WriteBack
         } else {
-            if (response->hit){
-                response->cycles = ci.cacheAccessCycles;
-            } else {
+            
+            //Check for diry bit
+            if (response->dirtyEviction){
                 response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+            } else {
+                response->cycles = ci.cacheAccessCycles;
             }
         }
 
@@ -343,7 +388,14 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
             response->cycles = ci.cacheAccessCycles;
  
         } else {
-            response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+            
+            //Check for dirty bit
+            if (response->dirtyEviction){
+                response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles + ci.memoryAccessCycles + ci.memoryAccessCycles; //Access memory twice, once to write back to memory and to load from memory
+
+            } else {
+                response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+            }
         }
     }
 }
