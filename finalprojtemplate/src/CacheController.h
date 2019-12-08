@@ -9,9 +9,6 @@
 
 #include "CacheStuff.h"
 #include <string>
-#include <vector>
-#include <list>
-#include <iterator>
 
 class CacheController {
 	private:
@@ -25,9 +22,6 @@ class CacheController {
 		unsigned int globalEvictions;
 		std::string inputFile, outputFile;
 
-		std::vector<std::list<CacheBlock>> myCache;
-		std::list<CacheBlock> :: iterator LRU;
-
 		CacheInfo ci;
 
 		// function to allow read or write access to the cache
@@ -36,7 +30,6 @@ class CacheController {
 		AddressInfo getAddressInfo(unsigned long int);
 		// compute the number of clock cycles used to complete a memory access
 		void updateCycles(CacheResponse*, bool);
-
 
 	public:
 		CacheController(CacheInfo, std::string);
