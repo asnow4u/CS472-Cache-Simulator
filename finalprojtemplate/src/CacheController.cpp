@@ -144,7 +144,7 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
     AddressInfo ai;
   	int size = 0;
     unsigned long int temp = address;
-    int binaryMask;
+    //int binaryMask;
 
     //Find size of address
     do {
@@ -180,15 +180,52 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
 
-    //Check if empty
-    for (unsigned int i=0; i<ci.associativity; i++){
+     //Search for matching tag within Index
+     for (unsigned int i=0; i<ci.associativity; i++){
+         
+         if (aiArray[ai.setIndex][i].valid == 1){
+            if (aiArray[ai.setIndex][i].tag == ai.tag){
+                response->hit = true;
+                cout << "HIT" << endl;
+            }
+         }
+     }
+
+    if (!response->hit){
        
-       if (aiArray[ai.setIndex][i].valid == 0){
-            aiArray[ai.setIndex][i].valid = 1;
-            aiArray[ai.setIndex][i].tag = ai.tag;
-            aiArray[ai.setIndex][i].setIndex = ai.setIndex;
-            i = ci.associativity;
-        } 
+        bool foundEmpty = false;
+
+        for (unsigned int i=0; i<ci.associativity; i++){
+
+            //Check for empty block
+            if (aiArray[ai.setIndex][i].valid == 0 && !foundEmpty){
+                aiArray[ai.setIndex][i].valid = 1;
+                aiArray[ai.setIndex][i].tag = ai.tag;
+                aiArray[ai.setIndex][i].setIndex = ai.setIndex;
+                foundEmpty = true;
+            }
+        }
+
+        //Use proper Replacement Policy
+        if (!foundEmpty){
+            
+            //Direct Mapped
+            if (ci.associativity == 1){
+                aiArray[ai.setIndex][1].tag = ai.tag;
+
+                response->eviction = true;
+            
+            //LRU
+            } else if(ci.rp == ReplacementPolicy::LRU) {
+
+                response->eviction = true;
+            
+            //Random
+            } else {
+
+                response->eviction = true;
+            }
+        }
     }
 
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
