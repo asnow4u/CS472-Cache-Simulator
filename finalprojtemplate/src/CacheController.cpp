@@ -133,9 +133,27 @@ void CacheController::runTracefile() {
 	Calculate the block index and tag for a specified address.
 */
 CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int address) {
-	AddressInfo ai;
-	// this code should be changed to assign the proper index and tag
-	return ai;
+	
+    AddressInfo ai;
+  	int size = 0;
+    unsigned long int temp = address;
+    int binaryMask;
+
+    //Find size of address
+    do {
+        temp /= 2;
+        size++;
+    } while (temp > 0);
+
+    //Index bit
+    binaryMask = ~(~0 << (ci.numSetIndexBits + 1));
+    ai.setIndex = (address >> ci.numByteOffsetBits) & binaryMask;
+
+    //Tag bit
+    binaryMask = ~(~0 << ((size - (ci.numSetIndexBits + ci.numByteOffsetBits)) + 1));
+    ai.tag = (address >> (ci.numSetIndexBits + ci.numByteOffsetBits) & binaryMask);
+
+    return ai;
 }
 
 /*
