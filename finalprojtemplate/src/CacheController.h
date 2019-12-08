@@ -15,18 +15,16 @@ class CacheController {
 		struct AddressInfo {
 			unsigned long int tag;
 			unsigned int setIndex;
+			unsigned int valid;
 		};
 		unsigned int globalCycles;
 		unsigned int globalHits;
 		unsigned int globalMisses;
 		unsigned int globalEvictions;
 		std::string inputFile, outputFile;
-		bool directMapped;
-		bool fullyAssociative;
 
 		CacheInfo ci;
-		AddressInfo **aiArrayPointer;
-		AddressInfo **aiSetArrayPointer;
+		AddressInfo **aiArray;
 
 		// function to allow read or write access to the cache
 		void cacheAccess(CacheResponse*, bool, unsigned long int);

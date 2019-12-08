@@ -33,63 +33,23 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalEvictions = 0;
 
 	srand(time(0));
+
 	// create your cache structure
-    
-    //Direct Mapped
-    if (ci.associativity == 1){
-        //Array of X elements
-        AddressInfo *aiArray[ci.numberSets];
+	AddressInfo tempArray[ci.numberSets][ci.associativity];
 
-        //Initilize Array
-        for (int i=0; i<(int)ci.numberSets; i++){
-            aiArray[i] = nullptr; //Not sure why this doesnt work 
-        
-        }
+	for (int i=0; i<this->ci.numberSets; i++){
+		for (int j=0; j<this->ci.associativity; j++){
+			AddressInfo tempAddress;
+			tempAddress.setIndex = 0;
+			tempAddress.tag = 0;
+			tempAddress.valid = 0;
 
-		aiArrayPointer = aiArray;
+			tempArray[i][j] = tempAddress;
+		}
+	}
 
-        for (int i=0; i<(int)ci.numberSets; i++){
-            if (aiArrayPointer[i]){
-                cout << i << " exists" << endl;
-            }else {
-                cout << i << " is null" << endl;
-            }
-        }
+	this->aiArray = tempArray;
 
-      	directMapped = true;
-		fullyAssociative = false;
-
-    //Fully Associative
-    } else if (ci.numberSets == 1){ //cache / (N * block)
-        //Array of Y elements
-        AddressInfo aiArray[ci.associativity];
-
-				//Initilize Array
-				for (int i=0; i<(int)ci.associativity; i++){
-						aiArray[i].setIndex = 0;
-						aiArray[i].tag = 0;
-				}
-
-				//aiArrayPointer = aiArray;
-				directMapped = false;
-				fullyAssociative = true;
-
-    //Set Associative
-    } else {
-        //Array of X x Y elements
-        AddressInfo aiArray[ci.numberSets][ci.associativity];
-
-				for (int i=0; i<(int)ci.numberSets; i++){
-					for (int j=0; j<(int)ci.associativity; j++){
-							aiArray[i][j].setIndex = 0;
-							aiArray[i][j].tag = 0;
-					}
-				}
-
-				//aiArrayPointer = aiArray; //**aiSetArrayPointer;
-				directMapped = false;
-				fullyAssociative = false;
-    }
 }
 
 /*
@@ -129,7 +89,7 @@ void CacheController::runTracefile() {
 
         //Load OP
 		} else if (std::regex_match(line, match, loadPattern)) {
-		
+
         for (int i=0; i<(int)ci.numberSets; i++){
             if (aiArrayPointer[i]){
                 cout << i << " exists" << endl;
@@ -164,7 +124,7 @@ void CacheController::runTracefile() {
 			istringstream hexStream(match.str(2));
 			hexStream >> std::hex >> address;
 			outfile << match.str(1) << match.str(2) << match.str(3);
-			
+
             // first process the read operation
 			cacheAccess(&response, false, address);
             updateCycles(&response, false);
@@ -173,7 +133,7 @@ void CacheController::runTracefile() {
             tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			unsigned long int totalCycles = response.cycles; // track the number of cycles used for both stages of the modify operation
-            
+
 			// now process the write operation
 			cacheAccess(&response, true, address);
             updateCycles(&response, true);
@@ -211,7 +171,7 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
     //Index bits
     binaryMask = ~(~0 << (ci.numSetIndexBits + 1));
     ai.setIndex = (address >> ci.numByteOffsetBits) & binaryMask;
-   
+
     cout << "setIndex: " << ai.setIndex << endl;
 
 
@@ -228,7 +188,7 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
     binaryMask = ~(~0 << ((addressSize - (ci.numSetIndexBits + ci.numByteOffsetBits)) + 1));
 	ai.tag = (address >> (ci.numSetIndexBits + ci.numByteOffsetBits) & binaryMask);
 
-    
+
 	return ai;
 }
 
@@ -246,96 +206,96 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 
 	//directMapped
-	if (directMapped){
+	if (this->ci.associativity == 1){
 
-        /*for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
-            if (aiArrayPointer[i]){
-                cout << i << " exists" << endl;
+        for (int i=0; i<this->ci.numberSets; i++){
+            if (aiArray[i][0].valid == 0){
+                cout << i << " is empty" << endl;
             }else {
-                cout << i << " is null" << endl;
+                cout << i << " exists" << endl;
             }
-        }*/
-
-        //Check to see if the index is empty
-        if (aiArrayPointer[ai.setIndex]){
-            //Compare tags
-
-			//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
-			//	response->hit = true;
-			//Replace what is written at the index
-			//} else {
-			//  aiArrayPointer[ai.setIndex] = &ai;
-			//  response->eviction = true;
-			//}
-		//Nothing exists here
-		} else {
-            //Replace what is written at the index (response->Miss)
-			//aiArrayPointer[ai.setIndex] = &ai; 
-		}
-    
-	//fullyAssociative
-	} else if (fullyAssociative){
-		//Loop through blocks
-		for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
-			//Compare tags
-			if (aiArrayPointer[i]->tag == ai.tag){
-				response->hit = true;
-			}
-		}
-		if (!response->hit){
-			//Check for open block
-			int count = 0;
-			for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
-				if (aiArrayPointer[i]->tag == 0 && count < 1){
-					//aiArrayPointer[i] = ai;
-					count++;
-				}
-			}
-			//Use the proper ReplacementPolicy
-			if (count < 1){
-				if (ci.rp == ReplacementPolicy::LRU){
-					//LRU ReplacementPolicy
-					//TODO update array
-					response->eviction = true;
-				} else {
-					//Random ReplacementPolicy
-					//aiArrayPointer[(rand() % (int)sizeof(aiArrayPointer))] = ai;
-					response->eviction = true;
-				}
-			}
-		}
-
-	//setAssociative
-	} else {
-        //Loop through index looking for tag
-        for (int i=0; i<(int)ci.associativity; i++){
-           // if (aiSetArrayPointer[ai->setIndex][i].tag == ai.tag){
-           //     response->hit = true;
-           // }
         }
-
-        if (!response->hit){
-            //Search for empty block
-           int count = 0;
-           for (int i=0; i<(int)ci.associativity; i++){
-               // if (aiSetArrayPointer[ai.setIndex][i].tag == 0 && count < 1){
-                   // aiSetArrayPointer[ai.setIndex][i] = ai;
-               //     count++;
-               // }
-           }
-           //Use proper ReplacementPolicy
-           if (count < 1){
-                if (ci.rp == ReplacementPolicy::LRU){
-                    //TODO update array
-                    response->eviction = true;
-
-                } else {
-                   // aiSetArrayPointer[ai.setIndex][(rand() % (int)ci.associativity +1)] = ai;
-                    response->eviction = true;
-
-                }
-           }
-        }
+	//
+  //       //Check to see if the index is empty
+  //     //  if (aiArrayPointer[ai.setIndex]){
+  //           //Compare tags
+	//
+	// 		//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
+	// 		//	response->hit = true;
+	// 		//Replace what is written at the index
+	// 		//} else {
+	// 		//  aiArrayPointer[ai.setIndex] = &ai;
+	// 		//  response->eviction = true;
+	// 		//}
+	// 	//Nothing exists here
+	// 	} else {
+  //           //Replace what is written at the index (response->Miss)
+	// 		//aiArrayPointer[ai.setIndex] = &ai;
+	// 	}
+	//
+	// //fullyAssociative
+	// } else if (fullyAssociative){
+	// 	//Loop through blocks
+	// 	for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
+	// 		//Compare tags
+	// 		if (aiArrayPointer[i]->tag == ai.tag){
+	// 			response->hit = true;
+	// 		}
+	// 	}
+	// 	if (!response->hit){
+	// 		//Check for open block
+	// 		int count = 0;
+	// 		for (int i=0; i<(int)sizeof(aiArrayPointer); i++){
+	// 			if (aiArrayPointer[i]->tag == 0 && count < 1){
+	// 				//aiArrayPointer[i] = ai;
+	// 				count++;
+	// 			}
+	// 		}
+	// 		//Use the proper ReplacementPolicy
+	// 		if (count < 1){
+	// 			if (ci.rp == ReplacementPolicy::LRU){
+	// 				//LRU ReplacementPolicy
+	// 				//TODO update array
+	// 				response->eviction = true;
+	// 			} else {
+	// 				//Random ReplacementPolicy
+	// 				//aiArrayPointer[(rand() % (int)sizeof(aiArrayPointer))] = ai;
+	// 				response->eviction = true;
+	// 			}
+	// 		}
+	// 	}
+	//
+	// //setAssociative
+	// } else {
+  //       //Loop through index looking for tag
+  //       for (int i=0; i<(int)ci.associativity; i++){
+  //          // if (aiSetArrayPointer[ai->setIndex][i].tag == ai.tag){
+  //          //     response->hit = true;
+  //          // }
+  //       }
+	//
+  //       if (!response->hit){
+  //           //Search for empty block
+  //          int count = 0;
+  //          for (int i=0; i<(int)ci.associativity; i++){
+  //              // if (aiSetArrayPointer[ai.setIndex][i].tag == 0 && count < 1){
+  //                  // aiSetArrayPointer[ai.setIndex][i] = ai;
+  //              //     count++;
+  //              // }
+  //          }
+  //          //Use proper ReplacementPolicy
+  //          if (count < 1){
+  //               if (ci.rp == ReplacementPolicy::LRU){
+  //                   //TODO update array
+  //                   response->eviction = true;
+	//
+  //               } else {
+  //                  // aiSetArrayPointer[ai.setIndex][(rand() % (int)ci.associativity +1)] = ai;
+  //                   response->eviction = true;
+	//
+  //               }
+  //          }
+  //       }
 	}
 
 	if (response->hit) {
@@ -392,5 +352,3 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 		}
 	}
 }
-
-
