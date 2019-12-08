@@ -9,6 +9,8 @@
 #include <fstream>
 #include <regex>
 #include <cmath>
+#include <stdlib.h>
+#include <time.h>
 
 
 using namespace std;
@@ -28,7 +30,9 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalMisses = 0;
 	this->globalEvictions = 0;
 	
-	// create your cache structure
+    srand(time(0));
+    
+   	// create your cache structure
     aiArray = new AddressInfo*[ci.numberSets]; 
     
     for (unsigned int i=0; i<ci.numberSets; i++){
@@ -42,8 +46,6 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
             aiArray[i][j].valid = 0;
         }
     }
-
-    
 
 }
 
@@ -227,20 +229,15 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
         //Use proper Replacement Policy
         if (!foundEmpty){
             
-            //Direct Mapped
-            if (ci.associativity == 1){
-                aiArray[ai.setIndex][1].tag = ai.tag;
-
-                response->eviction = true;
-
             //LRU
-            } else if(ci.rp == ReplacementPolicy::LRU) {
+            if(ci.rp == ReplacementPolicy::LRU) {
 
                 response->eviction = true;
 
             //Random
             } else {
-
+                unsigned int num = rand() % ci.associativity; 
+                aiArray[ai.setIndex][num].tag = ai.tag;
                 response->eviction = true;
             }
         }
