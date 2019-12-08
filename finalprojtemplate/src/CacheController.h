@@ -9,6 +9,7 @@
 
 #include "CacheStuff.h"
 #include <string>
+#include <vector>
 
 class CacheController {
 	private:
@@ -16,13 +17,14 @@ class CacheController {
 			unsigned long int tag;
 			unsigned int setIndex;
             unsigned int valid;
+            unsigned int LRUcounter;
 		};
 		unsigned int globalCycles;
 		unsigned int globalHits;
 		unsigned int globalMisses;
 		unsigned int globalEvictions;
 		std::string inputFile, outputFile;
-
+      
         AddressInfo** aiArray;
 
 		CacheInfo ci;

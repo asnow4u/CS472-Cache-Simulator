@@ -11,6 +11,7 @@
 #include <cmath>
 #include <stdlib.h>
 #include <time.h>
+#include <vector>
 
 
 using namespace std;
@@ -29,9 +30,10 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalHits = 0;
 	this->globalMisses = 0;
 	this->globalEvictions = 0;
-	
+
+
     srand(time(0));
-    
+
    	// create your cache structure
     aiArray = new AddressInfo*[ci.numberSets]; 
     
@@ -44,6 +46,7 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
             aiArray[i][j].tag = 0;
             aiArray[i][j].setIndex = 0;
             aiArray[i][j].valid = 0;
+            aiArray[i][j].LRUcounter = 0;
         }
     }
 
@@ -70,11 +73,13 @@ void CacheController::runTracefile() {
 	// open the output file
 	ifstream infile(inputFile);
 	// parse each line of the file and look for commands
+   
 	while (getline(infile, line)) {
 		// these strings will be used in the file output
 		string opString, activityString;
 		smatch match; // will eventually hold the hexadecimal address string
 		unsigned long int address;
+        
 		// create a struct to track cache responses
 		CacheResponse response;
         response.hit = false;
@@ -147,10 +152,11 @@ void CacheController::runTracefile() {
     //test
     for (unsigned int i=0; i<ci.numberSets; i++){
         for (unsigned int j=0; j<ci.associativity; j++){
-            cout << "aiArray[" << i << "][" << j << "] tag: " << aiArray[i][j].tag << " index: " << aiArray[i][j].setIndex << " valid: " << aiArray[i][j].valid << endl;
+            cout << "aiArray[" << i << "][" << j << "] tag: " << aiArray[i][j].tag << " index: " << aiArray[i][j].setIndex << " valid: " << aiArray[i][j].valid << " LRU: " << aiArray[i][j].LRUcounter << endl;
         }
     }
 
+    //Delete Cache
     for (unsigned int i = 0; i<ci.numberSets; i++){
         delete[] aiArray[i];
     }
@@ -206,6 +212,18 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
          
          if (aiArray[ai.setIndex][i].valid == 1){
             if (aiArray[ai.setIndex][i].tag == ai.tag){
+                
+                //Update LRUcounters 
+                if(ci.rp == ReplacementPolicy::LRU) {
+                    for (unsigned int j=0; j<ci.associativity; j++){
+                        if (aiArray[ai.setIndex][j].valid == 1){
+                            aiArray[ai.setIndex][j].LRUcounter++;
+                        }
+                    }
+
+                    aiArray[ai.setIndex][i].LRUcounter = 0;
+                }
+                
                 response->hit = true;
             }
          }
@@ -223,6 +241,18 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
                 aiArray[ai.setIndex][i].tag = ai.tag;
                 aiArray[ai.setIndex][i].setIndex = ai.setIndex;
                 foundEmpty = true;
+            
+            
+                //Update LRUcounters 
+                if(ci.rp == ReplacementPolicy::LRU) {
+                    for (unsigned int j=0; j<ci.associativity; j++){
+                        if (aiArray[ai.setIndex][j].valid == 1){
+                            aiArray[ai.setIndex][j].LRUcounter++;
+                        }
+                    }
+
+                    aiArray[ai.setIndex][i].LRUcounter = 0;
+                }
             }
         }
 
@@ -230,7 +260,27 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
         if (!foundEmpty){
             
             //LRU
-            if(ci.rp == ReplacementPolicy::LRU) {
+            if (ci.rp == ReplacementPolicy::LRU) {
+                unsigned int leastUsed = 0;
+                unsigned int leastUsedCounter = 0;
+
+                for (unsigned int i=0; i<ci.associativity; i++){
+                    if (aiArray[ai.setIndex][i].LRUcounter > leastUsedCounter){
+                        leastUsedCounter = aiArray[ai.setIndex][i].LRUcounter;
+                        leastUsed = i;
+                    }
+                }
+
+                aiArray[ai.setIndex][leastUsed].tag = ai.tag;
+               
+                //Update LRUcounters 
+                for (unsigned int i=0; i<ci.associativity; i++){
+                    if (aiArray[ai.setIndex][i].valid == 1){
+                        aiArray[ai.setIndex][i].LRUcounter++;
+                    }
+                }
+
+                aiArray[ai.setIndex][leastUsed].LRUcounter = 0;
 
                 response->eviction = true;
 
