@@ -15,12 +15,15 @@ class CacheController {
 		struct AddressInfo {
 			unsigned long int tag;
 			unsigned int setIndex;
+            unsigned int valid;
 		};
 		unsigned int globalCycles;
 		unsigned int globalHits;
 		unsigned int globalMisses;
 		unsigned int globalEvictions;
 		std::string inputFile, outputFile;
+
+        AddressInfo** aiArray;
 
 		CacheInfo ci;
 

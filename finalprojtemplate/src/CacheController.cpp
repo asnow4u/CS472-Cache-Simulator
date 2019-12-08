@@ -10,10 +10,12 @@
 #include <regex>
 #include <cmath>
 
+
 using namespace std;
 
 CacheController::CacheController(CacheInfo ci, string tracefile) {
-	// store the configuration info
+	
+    // store the configuration info
 	this->ci = ci;
 	this->inputFile = tracefile;
 	this->outputFile = this->inputFile + ".out";
@@ -27,19 +29,22 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalEvictions = 0;
 	
 	// create your cache structure
-	// ...
+    aiArray = new AddressInfo*[ci.numberSets]; 
+    
+    for (unsigned int i=0; i<ci.numberSets; i++){
+        aiArray[i] = new AddressInfo[ci.associativity];
+    }
 
-	// manual test code to see if the cache is behaving properly
-	// will need to be changed slightly to match the function prototype
-	/*
-	cacheAccess(false, 0);
-	cacheAccess(false, 128);
-	cacheAccess(false, 256);
+    for (unsigned int i=0; i<ci.numberSets; i++){
+        for (unsigned int j=0; j<ci.associativity; j++){
+            aiArray[i][j].tag = 0;
+            aiArray[i][j].setIndex = 0;
+            aiArray[i][j].valid = 0;
+        }
+    }
 
-	cacheAccess(false, 0);
-	cacheAccess(false, 128);
-	cacheAccess(false, 256);
-	*/
+    
+
 }
 
 /*
@@ -117,6 +122,11 @@ void CacheController::runTracefile() {
 
 	infile.close();
 	outfile.close();
+
+    for (unsigned int i = 0; i<ci.numberSets; i++){
+        delete[] aiArray[i];
+    }
+    delete[] aiArray;
 }
 
 /*
@@ -133,7 +143,9 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
 	The read or write is indicated by isWrite.
 */
 void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigned long int address) {
-	// determine the index and tag
+	
+    
+    // determine the index and tag
 	AddressInfo ai = getAddressInfo(address);
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
