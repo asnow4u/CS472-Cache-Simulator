@@ -3,7 +3,7 @@ CC := /usr/local/classes/eecs/fall2019/cs472/public/gcc/bin/g++
 STRIPUTIL = strip
 SRCDIR = src
 BUILDDIR = build
-TARGET = bin/cache_sim
+TARGET = cache_sim
 
 # Handle debug case
 DEBUG ?= 1
