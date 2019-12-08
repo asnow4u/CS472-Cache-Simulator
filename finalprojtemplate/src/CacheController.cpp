@@ -123,6 +123,13 @@ void CacheController::runTracefile() {
 	infile.close();
 	outfile.close();
 
+    //test
+    for (unsigned int i=0; i<ci.numberSets; i++){
+        for (unsigned int j=0; j<ci.associativity; j++){
+            cout << "aiArray[" << i << "][" << j << "] tag: " << aiArray[i][j].tag << " index: " << aiArray[i][j].setIndex << " valid: " << aiArray[i][j].valid << endl;
+        }
+    }
+
     for (unsigned int i = 0; i<ci.numberSets; i++){
         delete[] aiArray[i];
     }
@@ -146,13 +153,18 @@ CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int a
     } while (temp > 0);
 
     //Index bit
-    binaryMask = ~(~0 << (ci.numSetIndexBits + 1));
-    ai.setIndex = (address >> ci.numByteOffsetBits) & binaryMask;
+    //binaryMask = ~(~0 << (ci.numSetIndexBits + 1));
+    //ai.setIndex = (address >> ci.numByteOffsetBits) & binaryMask;
 
     //Tag bit
-    binaryMask = ~(~0 << ((size - (ci.numSetIndexBits + ci.numByteOffsetBits)) + 1));
-    ai.tag = (address >> (ci.numSetIndexBits + ci.numByteOffsetBits) & binaryMask);
+    //binaryMask = ~(~0 << ((size - (ci.numSetIndexBits + ci.numByteOffsetBits)) + 1));
+    //ai.tag = (address >> (ci.numSetIndexBits + ci.numByteOffsetBits) & binaryMask);
 
+    ai.tag = address >> ci.numSetIndexBits >> ci.numByteOffsetBits;
+    ai.setIndex = (address - (ai.tag << ci.numByteOffsetBits << ci.numSetIndexBits)) >> ci.numByteOffsetBits;
+
+
+    //cout << "size Index: " << ci.numSetIndexBits << " offset: " << ci.numByteOffsetBits << endl; 
     return ai;
 }
 
@@ -167,7 +179,18 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	AddressInfo ai = getAddressInfo(address);
 
 	cout << "\tSet index: " << ai.setIndex << ", tag: " << ai.tag << endl;
-	
+
+    //Check if empty
+    for (unsigned int i=0; i<ci.associativity; i++){
+       
+       if (aiArray[ai.setIndex][i].valid == 0){
+            aiArray[ai.setIndex][i].valid = 1;
+            aiArray[ai.setIndex][i].tag = ai.tag;
+            aiArray[ai.setIndex][i].setIndex = ai.setIndex;
+            i = ci.associativity;
+        } 
+    }
+
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 
 	if (response->hit)
