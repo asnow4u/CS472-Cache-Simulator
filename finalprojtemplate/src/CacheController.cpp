@@ -33,63 +33,28 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalEvictions = 0;
 
 	srand(time(0));
-	// create your cache structure
+
+    // create your cache structure
     
-    //Direct Mapped
-    if (ci.associativity == 1){
-        //Array of X elements
-        AddressInfo *aiArray[ci.numberSets];
-        bool accessArray[ci.numberSets];
-
-        //Initilize Array
-        for (int i=0; i<(int)ci.numberSets; i++){
-            //aiArray[i] = nullptr;
-            accessArray[i] = false;
-        
-        }
-        
-        
-		aiArrayPointer = aiArray;
-        accessed = accessArray;
-        
-        if (accessed[1]){
-            cout << "test" << endl;
-        }
-      	
-        directMapped = true;
-		fullyAssociative = false;
-
-    //Fully Associative
-    } else if (ci.numberSets == 1){ //cache / (N * block)
-        //Array of Y elements
-        AddressInfo aiArray[ci.associativity];
-
-				//Initilize Array
-				for (int i=0; i<(int)ci.associativity; i++){
-						aiArray[i].setIndex = 0;
-						aiArray[i].tag = 0;
-				}
-
-				//aiArrayPointer = aiArray;
-				directMapped = false;
-				fullyAssociative = true;
-
-    //Set Associative
-    } else {
-        //Array of X x Y elements
-        AddressInfo aiArray[ci.numberSets][ci.associativity];
-
-				for (int i=0; i<(int)ci.numberSets; i++){
-					for (int j=0; j<(int)ci.associativity; j++){
-							aiArray[i][j].setIndex = 0;
-							aiArray[i][j].tag = 0;
-					}
-				}
-
-				//aiArrayPointer = aiArray; //**aiSetArrayPointer;
-				directMapped = false;
-				fullyAssociative = false;
+    //AddressInfo tempArray[ci.numberSets][ci.associativity];
+    aiArray = new AddressInfo* [ci.numberSets];
+    for (unsigned int i=0; i< this->ci.numberSets; i++){
+        aiArray[i] = new AddressInfo[ci.associativity];
     }
+
+    for (unsigned int i=0; i< this->ci.numberSets; i++){
+        for (unsigned int j=0; j< this->ci.associativity; j++){
+            AddressInfo tempAddress;
+            tempAddress.setIndex = 0;
+            tempAddress.tag = 0;
+            tempAddress.valid = 0;
+            
+            //tempArray  = tempAddress;
+        }   
+    }
+
+    //this->aiArray = tempArray;
+
 }
 
 /*
@@ -187,6 +152,12 @@ void CacheController::runTracefile() {
 	outfile << "Hits: " << globalHits << " Misses: " << globalMisses << " Evictions: " << globalEvictions << endl;
 	outfile << "Cycles: " << globalCycles << endl;
 
+    //Delete Cache
+    for (unsigned int i=0; i< ci.numberSets; i++){
+        delete [] aiArray[i];
+    }
+    delete [] aiArray;
+
 	infile.close();
 	outfile.close();
 }
@@ -239,12 +210,17 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 	// your code needs to update the global counters that track the number of hits, misses, and evictions
 
 	//directMapped
-	if (directMapped){
+	if (this->ci.associativity == 1){
        
         //Check to see if the index is empty
-        if (accessed[ai.setIndex] == false){
+        for (unsigned int i=0; i< this->ci.numberSets; i++){
+            if (aiArray[i][0].valid == 0){
+                cout << i << " is empty" << endl;
+            } else {
+                cout << i << " exists" << endl;
+            }
+        }
             //Compare tags
-            cout << "accessed" << endl;
 			//if (aiArrayPointer[ai.setIndex]->tag == ai.tag){
 			//	response->hit = true;
 			//Replace what is written at the index
@@ -252,13 +228,11 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
 			//  aiArrayPointer[ai.setIndex] = &ai;
 			//  response->eviction = true;
 			//}
-		//Nothing exists here
-		} else {
-            cout << "not accessed" << endl;
+		//Noithing exists here
             //Replace what is written at the index (response->Miss)
 			//aiArrayPointer[ai.setIndex] = &ai; 
-		}
-    
+	//	}
+    /*
 	//fullyAssociative
 	} else if (fullyAssociative){
 		//Loop through blocks
@@ -322,6 +296,7 @@ void CacheController::cacheAccess(CacheResponse* response, bool isWrite, unsigne
                 }
            }
         }
+        */
 	}
 
 	if (response->hit) {
