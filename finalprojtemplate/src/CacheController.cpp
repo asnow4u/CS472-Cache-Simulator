@@ -30,6 +30,8 @@ CacheController::CacheController(CacheInfo ci, string tracefile) {
 	this->globalHits = 0;
 	this->globalMisses = 0;
 	this->globalEvictions = 0;
+    //this->globalWrites = 0;
+    //this->globalReads = 0;
 
 
     srand(time(0));
@@ -102,7 +104,8 @@ void CacheController::runTracefile() {
 			updateCycles(&response, false);
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
             globalCycles += response.cycles;
-		
+	        //globalReads++;
+
         //Store Op
         } else if (std::regex_match(line, match, storePattern)) {
 			cout << "Found a store op!" << endl;
@@ -113,6 +116,7 @@ void CacheController::runTracefile() {
 			updateCycles(&response, true);
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
             globalCycles += response.cycles;
+            //globalWrites++;
 		
         //Modify Op
         } else if (std::regex_match(line, match, modifyPattern)) {
@@ -128,7 +132,12 @@ void CacheController::runTracefile() {
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			unsigned long int totalCycles = response.cycles; // track the number of cycles used for both stages of the modify operation
-			
+			//globalReads++;
+            response.hit = false;
+            response.eviction = false;
+            response.dirtyEviction = false;
+
+
             // now process the write operation
 			cacheAccess(&response, true, address);
 			updateCycles(&response, true);
@@ -137,6 +146,7 @@ void CacheController::runTracefile() {
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
             globalCycles += totalCycles;
+            //globalWrites++;
 
         //error    
 		} else {
@@ -146,7 +156,7 @@ void CacheController::runTracefile() {
 	}
 	// add the final cache statistics
 	outfile << "Hits: " << globalHits << " Misses: " << globalMisses << " Evictions: " << globalEvictions << endl;
-	outfile << "Cycles: " << globalCycles << endl;
+	//outfile << "Cycles: " << globalCycles << " Reads:" << globalReads << " Writes:" << globalWrites << endl;
 
 	infile.close();
 	outfile.close();
@@ -364,14 +374,19 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
 	// your code should calculate the proper number of cycles
 	
     //Store
-    if (isWrite) {
+    if (isWrite == true) {
         
         //WriteThrough
         if (ci.wp == WritePolicy::WriteThrough){
-            response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+            if (response->hit){
+                response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+            } else {
+                //fetch block and write to it + update cache and main memory
+                response->cycles = ci.memoryAccessCycles *2 + ci.cacheAccessCycles*2;
+            }
 
         //WriteBack
-        } else {
+        } else if (ci.wp == WritePolicy::WriteBack) {
             
             //Check for diry bit
             if (response->dirtyEviction){

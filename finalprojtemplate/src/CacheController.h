@@ -9,7 +9,6 @@
 
 #include "CacheStuff.h"
 #include <string>
-#include <vector>
 
 class CacheController {
 	private:
@@ -24,6 +23,10 @@ class CacheController {
 		unsigned int globalHits;
 		unsigned int globalMisses;
 		unsigned int globalEvictions;
+        
+        //unsigned int globalWrites;
+        //unsigned int globalReads;
+
 		std::string inputFile, outputFile;
       
         AddressInfo** aiArray;
