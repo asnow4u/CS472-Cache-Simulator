@@ -158,7 +158,9 @@ void CacheController::runTracefile() {
 		}
 		outfile << endl;
 	}
-	// add the final cache statistics
+
+    
+    // add the final cache statistics
 	outfile << "Hits: " << globalHits << " Misses: " << globalMisses << " Evictions: " << globalEvictions << endl;
 	outfile << "Cycles: " << globalCycles << " Reads:" << numReads << " Writes:" << numWrites << endl;
 
@@ -166,12 +168,17 @@ void CacheController::runTracefile() {
 	outfile.close();
 
     //cache at the end
+    /*
     cout << "State of Cache:" << endl;
     for (unsigned int i=0; i<ci.numberSets; i++){
         for (unsigned int j=0; j<ci.associativity; j++){
             cout << "aiArray[" << i << "][" << j << "] tag: " << aiArray[i][j].tag << " index: " << aiArray[i][j].setIndex << " valid: " << aiArray[i][j].valid << " LRU: " << aiArray[i][j].LRUcounter << endl;
         }
     }
+     
+    cout << "Hits: " << globalHits << " Misses: " << globalMisses << " Evictions: " << globalEvictions << endl;
+	cout << "Cycles: " << globalCycles << " Reads:" << numReads << " Writes:" << numWrites << endl;
+    */
 
     //Delete Cache
     for (unsigned int i = 0; i<ci.numberSets; i++){
