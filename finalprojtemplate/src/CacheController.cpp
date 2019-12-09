@@ -175,9 +175,17 @@ void CacheController::runTracefile() {
             cout << "aiArray[" << i << "][" << j << "] tag: " << aiArray[i][j].tag << " index: " << aiArray[i][j].setIndex << " valid: " << aiArray[i][j].valid << " LRU: " << aiArray[i][j].LRUcounter << endl;
         }
     }
-     
-    cout << "Hits: " << globalHits << " Misses: " << globalMisses << " Evictions: " << globalEvictions << endl;
+    */
+      
+    cout << dec << "Hits: " << globalHits << " Misses: " << globalMisses << " Evictions: " << globalEvictions << endl;
 	cout << "Cycles: " << globalCycles << " Reads:" << numReads << " Writes:" << numWrites << endl;
+   
+    /*
+    unsigned int total = globalHits + globalMisses + globalEvictions;
+    float missRate = ((globalMisses + globalEvictions)*100 / total);
+
+    cout << "(miss + evictions) / total : " << globalMisses + globalEvictions << " / " << total << endl;
+    cout << "Miss rate: " << missRate << "%" << endl;
     */
 
     //Delete Cache
