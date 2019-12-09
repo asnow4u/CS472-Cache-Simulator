@@ -165,7 +165,8 @@ void CacheController::runTracefile() {
 	infile.close();
 	outfile.close();
 
-    //test
+    //cache at the end
+    cout << "State of Cache:" << endl;
     for (unsigned int i=0; i<ci.numberSets; i++){
         for (unsigned int j=0; j<ci.associativity; j++){
             cout << "aiArray[" << i << "][" << j << "] tag: " << aiArray[i][j].tag << " index: " << aiArray[i][j].setIndex << " valid: " << aiArray[i][j].valid << " LRU: " << aiArray[i][j].LRUcounter << endl;
@@ -185,15 +186,15 @@ void CacheController::runTracefile() {
 CacheController::AddressInfo CacheController::getAddressInfo(unsigned long int address) {
 	
     AddressInfo ai;
-  	int size = 0;
-    unsigned long int temp = address;
+  	//int size = 0;
+    //unsigned long int temp = address;
     //int binaryMask;
 
     //Find size of address
-    do {
-        temp /= 2;
-        size++;
-    } while (temp > 0);
+    //do {
+    //    temp /= 2;
+    //    size++;
+    //} while (temp > 0);
 
     //Index bit
     //binaryMask = ~(~0 << (ci.numSetIndexBits + 1));
@@ -394,7 +395,7 @@ void CacheController::updateCycles(CacheResponse* response, bool isWrite) {
             
             //Check for diry bit
             if (response->dirtyEviction){
-                response->cycles = ci.cacheAccessCycles + ci.memoryAccessCycles;
+                response->cycles = 2*ci.cacheAccessCycles + 2*ci.memoryAccessCycles;
             } else {
                 response->cycles = ci.cacheAccessCycles;
             }
