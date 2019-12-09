@@ -64,6 +64,10 @@ void CacheController::runTracefile() {
 	
 	// process each input line
 	string line;
+    //Counters
+    int numWrites, numReads;
+    numWrites = 0;
+    numReads = 0;
 	// define regular expressions that are used to locate commands
 	regex commentPattern("==.*");
 	regex instructionPattern("I .*");
@@ -104,7 +108,7 @@ void CacheController::runTracefile() {
 			updateCycles(&response, false);
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
             globalCycles += response.cycles;
-	        //globalReads++;
+	        numReads++;
 
         //Store Op
         } else if (std::regex_match(line, match, storePattern)) {
@@ -116,7 +120,7 @@ void CacheController::runTracefile() {
 			updateCycles(&response, true);
             outfile << " " << response.cycles << (response.hit ? " hit" : " miss") << (response.eviction ? " eviction" : "");
             globalCycles += response.cycles;
-            //globalWrites++;
+            numWrites++;
 		
         //Modify Op
         } else if (std::regex_match(line, match, modifyPattern)) {
@@ -132,7 +136,7 @@ void CacheController::runTracefile() {
 			tmpString.append(response.hit ? " hit" : " miss");
 			tmpString.append(response.eviction ? " eviction" : "");
 			unsigned long int totalCycles = response.cycles; // track the number of cycles used for both stages of the modify operation
-			//globalReads++;
+			numReads++;
             response.hit = false;
             response.eviction = false;
             response.dirtyEviction = false;
@@ -146,7 +150,7 @@ void CacheController::runTracefile() {
 			totalCycles += response.cycles;
 			outfile << " " << totalCycles << tmpString;
             globalCycles += totalCycles;
-            //globalWrites++;
+            numWrites++;
 
         //error    
 		} else {
@@ -156,7 +160,7 @@ void CacheController::runTracefile() {
 	}
 	// add the final cache statistics
 	outfile << "Hits: " << globalHits << " Misses: " << globalMisses << " Evictions: " << globalEvictions << endl;
-	//outfile << "Cycles: " << globalCycles << " Reads:" << globalReads << " Writes:" << globalWrites << endl;
+	outfile << "Cycles: " << globalCycles << " Reads:" << numReads << " Writes:" << numWrites << endl;
 
 	infile.close();
 	outfile.close();

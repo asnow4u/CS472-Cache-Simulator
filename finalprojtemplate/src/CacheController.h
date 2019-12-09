@@ -24,9 +24,6 @@ class CacheController {
 		unsigned int globalMisses;
 		unsigned int globalEvictions;
         
-        //unsigned int globalWrites;
-        //unsigned int globalReads;
-
 		std::string inputFile, outputFile;
       
         AddressInfo** aiArray;
